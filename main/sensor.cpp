@@ -240,6 +240,10 @@ void readTemp(void *pvParameters){
 	}
 }
 
+#define ST7789 1
+#include <ST7789H2.h>
+ST7789H2 dp77(CS_Display, SPI_DC, 0, RESET_Display);
+
 
 void sensor(void *args){
 	esp_wifi_set_mode(WIFI_MODE_NULL);
@@ -250,6 +254,7 @@ void sensor(void *args){
 	setupv.begin();
 	sleep( 1 );
 	Audio.begin( DAC_CHANNEL_1, GPIO_NUM_0, &mysetup );
+
 
 	xMutex=xSemaphoreCreateMutex();
 	uint8_t t_sb = 0;   //stanby 0: 0,5 mS 1: 62,5 mS 2: 125 mS
@@ -262,6 +267,24 @@ void sensor(void *args){
 	xSemaphoreTake(spiMutex,portMAX_DELAY );
 	SPI.begin( SPI_SCLK, SPI_MISO, SPI_MOSI, CS_bme280TE );
 	xSemaphoreGive(spiMutex);
+
+#ifdef ST7789
+
+	dp77.begin( 10000000, SPI ); // 40 Mhz later
+	dp77.setTextColor( ST7789H2_PURPLE );
+	dp77.setCursor( 50,50 );
+	dp77.invertDisplay(true);
+	// dp77.setFont( );
+	dp77.startWrite();
+	dp77.drawRect( 10,10,40,100, ST7789H2_PURPLE );
+	dp77.printf("Hello Iltis\n");
+	dp77.endWrite();
+	printf("Hello Iltis to ST7789 sent !\n");
+	sleep(10);
+
+#endif
+
+
 
 	printf("BMP280 sensors init..\n");
 

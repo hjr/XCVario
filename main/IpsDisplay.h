@@ -14,7 +14,7 @@
 #include <Ucglib.h>
 
 // For display with invers Color
-
+/*
 #define COLOR_HEADER 255-101,255-108,255-255  // Azureish gray
 #define COLOR_WHITE 0,0,0
 #define COLOR_BLACK 255,255,255
@@ -25,6 +25,19 @@
 #define DARK_GREY    230, 230, 230
 #define COLOR_MGREY  180, 180, 180
 #define COLOR_BLUE   255, 255, 0
+*/
+// For 2 inch display with B and R twisted Color
+
+#define COLOR_HEADER 255-255,255-108,255-101  // Azureish gray
+#define COLOR_WHITE 0,0,0
+#define COLOR_BLACK 255,255,255
+#define COLOR_GREEN 255, 30, 255
+#define COLOR_RED   255,255,0
+#define LIGHT_GREEN 255,0,127
+#define COLOR_YELLOW 255, 0, 0
+#define DARK_GREY    230, 230, 230
+#define COLOR_MGREY  180, 180, 180
+#define COLOR_BLUE   0, 255, 255
 
 /*
 #define COLOR_HEADER 65,105,225  // royal blue

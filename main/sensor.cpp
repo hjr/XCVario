@@ -240,9 +240,11 @@ void readTemp(void *pvParameters){
 	}
 }
 
-#define ST7789 1
+// #define ST7789 1
+#ifdef ST7789
 #include <ST7789H2.h>
 ST7789H2 dp77(CS_Display, SPI_DC, 0, RESET_Display);
+#endif
 
 
 void sensor(void *args){
@@ -267,24 +269,6 @@ void sensor(void *args){
 	xSemaphoreTake(spiMutex,portMAX_DELAY );
 	SPI.begin( SPI_SCLK, SPI_MISO, SPI_MOSI, CS_bme280TE );
 	xSemaphoreGive(spiMutex);
-
-#ifdef ST7789
-
-	dp77.begin( 10000000, SPI ); // 40 Mhz later
-	dp77.setTextColor( ST7789H2_PURPLE );
-	dp77.setCursor( 50,50 );
-	dp77.invertDisplay(true);
-	// dp77.setFont( );
-	dp77.startWrite();
-	dp77.drawRect( 10,10,40,100, ST7789H2_PURPLE );
-	dp77.printf("Hello Iltis\n");
-	dp77.endWrite();
-	printf("Hello Iltis to ST7789 sent !\n");
-	sleep(10);
-
-#endif
-
-
 
 	printf("BMP280 sensors init..\n");
 
@@ -332,6 +316,23 @@ void sensor(void *args){
 	gpio_set_pull_mode(CS_Display, GPIO_PULLUP_ONLY );
 	gpio_set_pull_mode(CS_bme280BA, GPIO_PULLUP_ONLY );
 	gpio_set_pull_mode(CS_bme280TE, GPIO_PULLUP_ONLY );
+
+#ifdef ST7789
+
+	dp77.begin( 10000000, SPI ); // 40 Mhz later
+	dp77.setTextColor( ST7789H2_PURPLE );
+	dp77.setCursor( 50,50 );
+	dp77.invertDisplay(true);
+	// dp77.setFont( );
+	dp77.drawRect( 10,10,40,100, ST7789H2_PURPLE );
+	dp77.drawRect( 0,0,239,319, ST7789H2_BLACK );
+	dp77.drawRect( 0,0,239,319, ST7789H2_WHITE );
+	// dp77.printf("Hello Iltis\n");
+	printf("Hello Iltis to ST7789 sent !\n");
+	sleep(10);
+
+#endif
+
 
 	xTaskCreatePinnedToCore(&drawDisplay, "drawDisplay", 8000, NULL, 5, dpid, 0);
 

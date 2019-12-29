@@ -16,6 +16,13 @@
 #include "ST7789H2.h"
 #include <limits.h>
 #include <pgmspace.h>
+#include <stdio.h>
+#include <esp_log.h>
+
+static const char* TAG = "ST7789";
+#ifndef CONFIG_LOG_DEFAULT_LEVEL
+#define CONFIG_LOG_DEFAULT_LEVEL 2
+#endif
 
 #define MADCTL_MY  0x80
 #define MADCTL_MX  0x40
@@ -444,7 +451,7 @@ ST7789H2::ST7789H2(int8_t cs, int8_t dc, int8_t ledbk, int8_t rst) : WIDTH(ST778
     _cs   = cs;
     _dc   = dc;
     _rst  = rst;
-    _sclk  = 14;
+    _sclk  = -1;
     _mosi  = 27;
     _miso  = 32;
     _freq = 0;
@@ -464,6 +471,7 @@ ST7789H2::ST7789H2(int8_t cs, int8_t dc, int8_t ledbk, int8_t rst) : WIDTH(ST778
 }
 
 
+
 #ifdef ESP32
 void ST7789H2::begin(uint32_t freq, SPIClass &spi)
 #else
@@ -473,6 +481,8 @@ void ST7789H2::begin(uint32_t freq)
 #ifdef ESP32
     _spi = spi;
 #endif
+    ESP_LOGW(TAG, "begin %d", freq );
+    // printf("ST7789H2::begin( %d ,..)\n", freq );
     if(!freq){
         freq = SPI_DEFAULT_FREQ;
     }
@@ -503,6 +513,7 @@ void ST7789H2::begin(uint32_t freq)
 
     // toggle RST low to reset
     if (_rst >= 0) {
+    	// printf("RST SPI\n");
         pinMode(_rst, OUTPUT);
         digitalWrite(_rst, HIGH);
         delay(100);
@@ -704,6 +715,7 @@ uint8_t ST7789H2::spiRead() {
 
 void ST7789H2::spiWrite(uint8_t b) {
     if(_sclk < 0){
+    	ESP_LOGW(TAG, "spiWrite(%d)", b );
         HSPI_WRITE(b);
         return;
     }

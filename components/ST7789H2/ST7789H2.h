@@ -28,7 +28,6 @@
 #endif
 #define PROGMEM
 
-//#include "SD.h"
 
 typedef struct { // Data stored PER GLYPH
 	uint16_t bitmapOffset;     // Pointer into GFXfont->bitmap

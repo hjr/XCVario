@@ -148,16 +148,49 @@ void drawDisplay(void *pvParameters){
 
 char lb[160];
 
+float getqnh( void ) {
+	// printf("QNH Autosetup, speed=%3f (<50 km/h)\n", speed );
+	// QNH autosetup
+	float ae = mysetup.get()->_elevation;
+	float qnh_best = 1013.2;
+	baroP = bmpBA.readPressure();
+	if( ae > 0 ) {
+		float step=10.0; // 80 m
+		float min=1000.0;
+
+		for( float qnh = 900; qnh< 1080; qnh+=step ) {
+			float alt = bmpBA.readAltitude( qnh );
+			float diff = alt - ae;
+			// printf("Alt diff=%4.2f  abs=%4.2f\n", diff, abs(diff) );
+			if( abs( diff ) < 100 )
+				step=1.0;  // 8m
+			if( abs( diff ) < 10 )
+				step=0.05;  // 0.4 m
+			if( abs( diff ) < abs(min) ) {
+				min = diff;
+				qnh_best = qnh;
+				// printf("New min=%4.2f\n", min);
+			}
+			if( diff > 1.0 ) // we are ready, values get already positive
+				break;
+		}
+		printf("qnh=%4.2f\n\n\n", qnh_best);
+		mysetup.get()->_QNH = qnh_best;
+	}
+	return qnh_best;
+}
+
 void readBMP(void *pvParameters){
 	while (1)
 	{
 		TickType_t xLastWakeTime = xTaskGetTickCount();
-		if( Audio.getDisable() != true )
+		if( 1 )
 		{
 			// long newmsec = millis();
 			// if( abs (newmsec - millisec - 100 ) > 2 )
 			// 	printf("Unsharp != 100: %d ms\n", int( newmsec - millisec ) );
 			// millisec = newmsec;
+			float qnh = getqnh();
 			TE = bmpVario.readTE();
 			vTaskDelay(1);
 			baroP = bmpBA.readPressure();
@@ -175,13 +208,13 @@ void readBMP(void *pvParameters){
 			xSemaphoreTake(xMutex,portMAX_DELAY );
 			if( enableBtTx ) {
 				// char lb[120];
-				OV.makeNMEA( lb, baroP, speedP, TE, temperature );
-				btsender.send( lb );
+				// OV.makeNMEA( lb, baroP, speedP, TE, temperature );
+				// btsender.send( lb );
 				vTaskDelay(1);
 			}
 			xSemaphoreGive(xMutex);
 
-			speed = speed + (MP5004DP.pascal2km( speedP, temperature ) - speed)*0.1;
+			speed = 0; // speed + (MP5004DP.pascal2km( speedP, temperature ) - speed)*0.1;
 			aTE = bmpVario.readAVGTE();
 			aCl = bmpVario.readAvgClimb();
 			vTaskDelay(1);
@@ -209,7 +242,7 @@ void readBMP(void *pvParameters){
 						s2fmode = false;
 					break;
 			}
-			Audio.setS2FMode( s2fmode );
+			// Audio.setS2FMode( s2fmode );
  			if( uxTaskGetStackHighWaterMark( bpid ) < 1024  )
 				printf("Warning sensor task stack low: %d bytes\n", uxTaskGetStackHighWaterMark( bpid ) );
 
@@ -217,7 +250,7 @@ void readBMP(void *pvParameters){
 		// printf("bmpTask stack=%d\n", uxTaskGetStackHighWaterMark( bpid ) );
 		esp_task_wdt_reset();
 		// delay(85);
-		vTaskDelayUntil(&xLastWakeTime, 100/portTICK_PERIOD_MS);
+		vTaskDelayUntil(&xLastWakeTime, 1000/portTICK_PERIOD_MS);
 	}
 }
 
@@ -239,33 +272,27 @@ int ttick = 0;
 void readTemp(void *pvParameters){
 	while (1) {
 		TickType_t xLastWakeTime = xTaskGetTickCount();
-		if( Audio.getDisable() != true )
-		{
-			battery = ADC.getBatVoltage();
-			// printf("Battery=%f V\n", battery );
-			float t = ds18b20.getTemp();
-			// xSemaphoreTake(xMutex,portMAX_DELAY );
-			if( t ==  DEVICE_DISCONNECTED_C ) {
-				validTemperature = false;
-				temperature = DEVICE_DISCONNECTED_C;
-				if( no_t_sensor == false ) {
-					printf("Warning: No Temperatur Sensor found, please plug Temperature Sensor\n");
-					no_t_sensor = true;
-				}
+		float t = ds18b20.getTemp();
+		if( t ==  DEVICE_DISCONNECTED_C ) {
+			validTemperature = false;
+			temperature = DEVICE_DISCONNECTED_C;
+			if( no_t_sensor == false ) {
+				printf("Warning: No Temperatur Sensor found, please plug Temperature Sensor\n");
+				no_t_sensor = true;
 			}
-			else
-			{
-				validTemperature = true;
-				temperature = temperature + (t-temperature)*0.2;
-			}
-			// printf("temperature=%f\n", temperature );
-			// xSemaphoreGive(xMutex);
 		}
+		else
+		{
+			printf("Valid temperature=%f\n", temperature );
+			validTemperature = true;
+			temperature = temperature + (t-temperature)*0.5;
+		}
+		// printf("temperature=%f\n", temperature );
 		esp_task_wdt_reset();
-		vTaskDelayUntil(&xLastWakeTime, 1000/portTICK_PERIOD_MS);
-        if( (ttick++ % 10) == 0) {
-		  printf("+++++++++++++  heap_caps_get_free_size: %d\n", heap_caps_get_free_size(MALLOC_CAP_8BIT));
-        }
+		vTaskDelayUntil(&xLastWakeTime, 500/portTICK_PERIOD_MS);
+		if( (ttick++ % 10) == 0) {
+			printf("+++++++++++++  heap_caps_get_free_size: %d\n", heap_caps_get_free_size(MALLOC_CAP_8BIT));
+		}
 	}
 }
 
@@ -389,45 +416,7 @@ void sensor(void *args){
 	bmpVario.setup();
 	VaSoSW.begin( GPIO_NUM_12 );
 
-	printf("Speed sensors init..\n");
-	MP5004DP.begin( GPIO_NUM_21, GPIO_NUM_22, mysetup.get()->_speedcal, &mysetup);  // sda, scl
-	uint16_t val;
-	bool works=MP5004DP.selfTest( val );
 
-	if( !works ){
-		printf("Error reading air speed pressure sensor MP5004DP->MCP3321 I2C returned error\n");
-		display.writeText( line++, "IAS Sensor: Not found");
-		failed_tests += "IAS Sensor: NOT FOUND\n";
-		selftestPassed = false;
-	}
-
-	if( !MP5004DP.offsetPlausible( val )  ){
-		printf("Error: IAS P sensor offset MP5004DP->MCP3321 out of bounds (608-1034), act value=%d\n", val );
-		display.writeText( line++, "IAS Sensor: Offset Error");
-		failed_tests += "IAS Sensor offset test: FAILED\n";
-		selftestPassed = false;
-	}
-	else {
-		printf("MP5004->MCP3321 test PASSED, readout value in bounds (608-1034)=%d\n", val );
-		display.writeText( line++, "IAS Sensor: OK");
-		failed_tests += "IAS Sensor offset test: PASSED\n";
-	}
-
-	MP5004DP.doOffset();
-
-	Audio.begin( DAC_CHANNEL_1, GPIO_NUM_0, &mysetup );
-	// TBD audio Poti test here.
-	if( !Audio.selfTest() ) {
-		printf("Error: Digital potentiomenter selftest failed\n");
-		display.writeText( line++, "Digital Poti: Failure");
-		selftestPassed = false;
-		failed_tests += "Digital Audio Poti test: FAILED\n";
-	}
-	else{
-		printf("Digital potentiometer test PASSED\n");
-		failed_tests += "Digital Audio Poti test: PASSED\n";
-		display.writeText( line++, "Digital Poti: OK");
-	}
 
 
 	float bat = ADC.getBatVoltage(true);
@@ -479,7 +468,7 @@ void sensor(void *args){
 	else{
 		printf("\n\n\n*****  Selftest PASSED  ********\n\n\n");
 		display.writeText( line++, "Selftest PASSED");
-		sleep(3);
+		sleep(2);
 	}
 /*
    Sound::playSound( DING );
@@ -492,39 +481,6 @@ void sensor(void *args){
 	printf("Speed=%f\n", speed);
 	display.initDisplay();
 	Menu.begin( &display, &Rotary, &mysetup, &setupv, &bmpBA, &ADC );
-	if( speed < 50.0 ){
-		xSemaphoreTake(xMutex,portMAX_DELAY );
-		printf("QNH Autosetup, speed=%3f (<50 km/h)\n", speed );
-		// QNH autosetup
-		float ae = mysetup.get()->_elevation;
-		baroP = bmpBA.readPressure();
-		if( ae > 0 ) {
-			float step=10.0; // 80 m
-			float min=1000.0;
-			float qnh_best = 1013.2;
-			for( float qnh = 900; qnh< 1080; qnh+=step ) {
-				float alt = bmpBA.readAltitude( qnh );
-				float diff = alt - ae;
-				printf("Alt diff=%4.2f  abs=%4.2f\n", diff, abs(diff) );
-				if( abs( diff ) < 100 )
-					step=1.0;  // 8m
-				if( abs( diff ) < 10 )
-					step=0.05;  // 0.4 m
-				if( abs( diff ) < abs(min) ) {
-					min = diff;
-					qnh_best = qnh;
-					printf("New min=%4.2f\n", min);
-				}
-				if( diff > 1.0 ) // we are ready, values get already positive
-					break;
-			}
-			printf("qnh=%4.2f\n\n\n", qnh_best);
-			mysetup.get()->_QNH = qnh_best;
-		}
-
-		SetupMenuValFloat::showQnhMenu();
-		xSemaphoreGive(xMutex);
-	}
 
 	Rotary.begin( GPIO_NUM_4, GPIO_NUM_2, GPIO_NUM_0);
 
@@ -534,10 +490,10 @@ void sensor(void *args){
 	gpio_set_pull_mode(CS_bme280TE, GPIO_PULLUP_ONLY );
 
 	xTaskCreatePinnedToCore(&readBMP, "readBMP", 4096, NULL, 20, bpid, 0);
-	xTaskCreatePinnedToCore(&audioTask, "audioTask", 4096, NULL, 30, 0, 0);
+	// xTaskCreatePinnedToCore(&audioTask, "audioTask", 4096, NULL, 30, 0, 0);
 
 	xTaskCreatePinnedToCore(&drawDisplay, "drawDisplay", 8000, NULL, 10, dpid, 0);
-	xTaskCreatePinnedToCore(&readTemp, "readTemp", 8000, NULL, 3, tpid, 0);
+	xTaskCreatePinnedToCore(&readTemp, "readTemp", 4096, NULL, 19, tpid, 0);
 
 	printf("Free Stack: S:%d \n", uxTaskGetStackHighWaterMark( spid ) );
 

@@ -60,7 +60,7 @@ void Setup::factorySetting()
 		_setup._bat_red_volt = 11.75;
 		_setup._bat_yellow_volt = 12.0;
 		_setup._bat_full_volt = 12.8;
-		_setup._display_type = UNIVERSAL;
+		_setup._display_type = ILI9341_TFT_18P;
 		_setup._core_climb_min = 0.5;
 		_setup._core_climb_history = 45;
 		_setup._elevation = -1;

@@ -154,10 +154,10 @@ void ESPRotary::readPos(void * args) {
         {
         	// printf( "Rotaty dt/clk cur:%d last:%d\n", r0, r1 );
         	if( (r0 == 0) && (r1 == 3) ) {
-        		dir--;
+        		dir++;
         	}
         	else if ( (r0 == 1) && (r1 == 2) ) {
-        		dir++;
+        		dir--;
         	}
         	else if( (r0 == 3) && (r1 == 0) ) {
         		// printf("Rotary 30\n");

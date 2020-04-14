@@ -11,6 +11,7 @@
 #include "DallasRmt.h"
 
 #include "esp_system.h"
+#include "driver/gpio.h"
 
 #define MAX_DEVICES 10
 

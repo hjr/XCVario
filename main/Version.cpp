@@ -9,13 +9,13 @@
 #include <stdio.h>
 #include <string.h>
 
-char Version::_version[12];
+char Version::_version[20];
 
 Version::Version() {
 	const char data[]=__DATE__;
 	const char tempo[]=__TIME__;
 	const char nomes[] = "JanFebMarAprMayJunJulAugSepOctNovDec";
-	char omes[4];
+	char omes[10];
 	int ano, mes, dia, hora, min, seg;
 	sscanf(data, "%s %d %d", omes, &dia, &ano);
 	sscanf(tempo, "%d:%d:%d", &hora, &min, &seg);

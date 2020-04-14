@@ -14,6 +14,7 @@
 #include <freertos/semphr.h>
 #include "freertos/FreeRTOS.h"
 #include "esp_system.h"
+#include "driver/gpio.h"
 
 
 class RotaryObserver{

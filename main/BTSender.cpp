@@ -7,6 +7,7 @@
 #include "freertos/task.h"
 #include <queue>
 #include <algorithm>
+#include "driver/gpio.h"
 
 char rxBuffer[100];
 int BTSender::i=0;

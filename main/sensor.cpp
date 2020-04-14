@@ -123,6 +123,7 @@ BTSender btsender( handleRfcommRx  );
 
 
 void readBMP(void *pvParameters){
+	display.begin( &setup );
 	while (1) {
 		TickType_t xLastWakeTime = xTaskGetTickCount();
 		if( Audio.getDisable() != true )
@@ -210,7 +211,6 @@ void sensor(void *args){
 
 	setup.begin();
 	setupv.begin();
-	display.begin( &setup );
 	sleep( 1 );
 	Audio.begin( DAC_CHANNEL_1, GPIO_NUM_0, &setup );
 
@@ -240,7 +240,6 @@ void sensor(void *args){
     pwm1.setContrast( setup.get()->_contrast_adj );
     s2f.change_polar();
 	s2f.change_mc_bal();
-	xTaskCreatePinnedToCore(&readBMP, "readBMP", 8000, NULL, 6, bpid, 0);
 	Version myVersion;
 	printf("Program Version %s\n", myVersion.version() );
 
@@ -259,6 +258,7 @@ void sensor(void *args){
 	xTaskCreatePinnedToCore(&readTemp, "readTemp", 8000, NULL, 3, tpid, 0);
 	Rotary.begin( GPIO_NUM_4, GPIO_NUM_2, GPIO_NUM_0);
 	Menu.begin( &display, &Rotary, &setup, &setupv, &bmpBA, &ADC );
+	xTaskCreatePinnedToCore(&readBMP, "readBMP", 8000, NULL, 6, bpid, 0);
 	printf("Free Stack: S:%d \n", uxTaskGetStackHighWaterMark( spid ) );
 	vTaskDelete( NULL );
 

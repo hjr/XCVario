@@ -55,6 +55,7 @@ DotDisplay::~DotDisplay() {
 
 
 void DotDisplay::begin( Setup* asetup ) {
+	printf("++++++++++++++++++++++++++++++++++  Display begin\n");
 	u8g2_esp32_hal = U8G2_ESP32_HAL_DEFAULT;
 	u8g2_esp32_hal.clk   = _scl;   // SCLK_bme280;
 	u8g2_esp32_hal.mosi  = _mosi;  // MOSI_bme280;
@@ -63,6 +64,8 @@ void DotDisplay::begin( Setup* asetup ) {
 	u8g2_esp32_hal.dc    = _dc;    // GPIO_NUM_15;
 	u8g2_esp32_hal.reset = _reset; // GPIO_NUM_5;
 	u8g2_esp32_hal_init(u8g2_esp32_hal);
+        _dtype = UC1701;
+
 
 	// a structure which will contain all the data for one display
 	switch( _dtype ) {
@@ -76,6 +79,7 @@ void DotDisplay::begin( Setup* asetup ) {
 					U8G2_R0,
 					u8g2_esp32_spi_byte_cb,
 					u8g2_esp32_gpio_and_delay_cb);
+			    printf("China LCS cb%x\n", (int)u8g2.cb );
 		break;
 
 	case ST7565:  // Reichelt LCD

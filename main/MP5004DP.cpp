@@ -27,6 +27,14 @@ bool MP5004DP::begin(gpio_num_t sda, gpio_num_t scl, float speedcal, Setup* setu
 	return true;
 }
 
+bool MP5004DP::selfTest(uint16_t& val)
+{
+	if( MCP.readRaw(val) == ESP_OK )
+		return( true);
+	else
+		return(false);
+}
+
 /*
  * Offset Voltage according to datasheet:
  *  0.45 0.6 0.75  V  @ 3V Vs
@@ -52,7 +60,7 @@ bool MP5004DP::doOffset( bool force ){
 	}
 	_haveDevice=true;
 	printf("MP5004DP looks like have device\n");
-	std::string _offset_nvs_key( "OFFSET4" );
+	// std::string _offset_nvs_key( "OFFSET4" );
 	printf("MP5004DP key initialized\n");
 	_offset = &_setup->get()->_offset;
 
@@ -66,7 +74,7 @@ bool MP5004DP::doOffset( bool force ){
        printf("Offset is plausible\n");
 	   p = readPascal();
 	   printf("Pressure offset (Pascal): %0.1f\n",p);
-       if( p > 30.0 ){
+       if( p > 124.0 ){   // or 50 km/h
     	  flying = true;
     	  printf("Flying state: P > 30\n");
        }

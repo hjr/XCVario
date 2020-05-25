@@ -1,7 +1,7 @@
 # OpenIVario
 ESP32 based lean Variometer system with OpenVario Interface
 
-[Long Vario 3D printed](https://github.com/iltis42/OpenIVario/blob/LV-R2/images/LV-R2.jpg)
+![Long Vario 3D printed](https://github.com/iltis42/OpenI!Vario/blob/LV-R2/images/LV-R2.jpg)
 
 At the begin i want to show a short Demo of the variometer, including sensitivity and full sunlight test, followed by an explanation of various setup options and how to use. Its now the third year of this project, moving now to a colored display this winter we built a low number of devices with a 3D printed housing, but depending on followers demands, we may do a bigger lot in near future.
 

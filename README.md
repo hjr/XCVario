@@ -54,6 +54,6 @@ The Soft- and Hardware features:
 - 3D Printed Housing Available 
 - Schematic Sensor Board: [Sensor Board Schematic](https://github.com/iltis42/OpenIVario/blob/LV-R2/images/sensor.pdf)
 - Schematic Display Board: [Display Schematic](https://github.com/iltis42/OpenIVario/blob/LV-R2/images/ivario-display.pdf)
-- Connector Pinout: [Sub-D Connector](https://github.com/iltis42/OpenIVario/blob/LV_R2/images/subd.pdf)
+- Connector Pinout: [Sub-D Connector](https://github.com/iltis42/OpenIVario/blob/LV-R2/images/subd.pdf)
 
 ![Sensor Board PCB](https://github.com/iltis42/OpenIVario/blob/LV-R2/images/Sensorboard.jpg)

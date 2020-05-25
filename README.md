@@ -1,5 +1,5 @@
 # OpenIVario
-ESP32 based lean Variometer system with OpenVario Interface
+ESP32 based lean Variometer system with OpenVario Interface, LV release with 3D printed 'Long Vario'
 
 ![Long Vario 3D printed](https://github.com/iltis42/OpenIVario/blob/LV-R2/images/LV-R2.jpg?raw=true)
 

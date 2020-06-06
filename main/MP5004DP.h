@@ -37,7 +37,7 @@ P = 5000/4096 * adc
 */
 
 
-const float correction = 5000.0/4096.0 * 1000.0/1026;  // we measured 2.6 % plus in first sample.
+const float correction = 5000.0/4096.0;  //
 const float alpha = 0.2;
 const float min_pascal = 10.0;
 

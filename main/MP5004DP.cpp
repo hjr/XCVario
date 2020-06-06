@@ -127,7 +127,7 @@ float MP5004DP::readPascal( float minimum ){
 float   MP5004DP::pascal2km( float pascal, float temp )
 {
     // p = 1/2 * rho * v^2
-	float rho = 101325.0 / (287.058 * (273.15 + temp));
+	float rho = 1.225;
     float v = sqrt( 2*pascal / rho );
 	return v*3.6;
 }

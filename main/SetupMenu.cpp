@@ -31,6 +31,8 @@
 #include "Compass.h"
 #include "CompassMenu.h"
 
+#define LOG_LOCAL_LEVEL 0
+
 static char rentry[25];
 SetupMenuSelect * audio_range_sm = 0;
 SetupMenuSelect * mpu = 0;

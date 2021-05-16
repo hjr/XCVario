@@ -22,6 +22,8 @@ Last update: 2021-02-25
 #include "IpsDisplay.h"
 #include "SetupMenuDisplay.h"
 
+#define LOG_LOCAL_LEVEL 0
+
 SetupMenuDisplay::SetupMenuDisplay( String title,
                                     int (*action)(SetupMenuDisplay *p) ) :
   MenuEntry()

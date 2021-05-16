@@ -11,6 +11,8 @@
 #include "SetupMenuSelect.h"
 #include "ESPAudio.h"
 
+#define LOG_LOCAL_LEVEL 0
+
 char SetupMenuSelect::_val_str[20];
 
 bool SetupMenuSelect::existsEntry( String ent ){

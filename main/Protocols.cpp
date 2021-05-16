@@ -364,7 +364,7 @@ void Protocols::parseNMEA( char *astr ){
 
 		else if ( (strncmp( str, "!g,", 3 ) == 0)    ) {
 			ESP_LOGI(FNAME,"parseNMEA, Cambridge C302 style command !g detected: %s",str);
-			if (str[3] == 'b' && blue_enable.get() != WL_WLAN_CLIENT ) {  // we run own protocol between Master and Client as of bad precision in official
+			if (str[3] == 'b' && xcvMaster ) {  // we run own protocol between Master and Client as of bad precision in official
 				ESP_LOGI(FNAME,"parseNMEA, BORGELT, ballast modification");
 				float aballast;
 				sscanf(str, "!g,b%f", &aballast);
@@ -378,7 +378,7 @@ void Protocols::parseNMEA( char *astr ){
 				ESP_LOGI(FNAME,"Final new ballast: %f ", bal);
 				ballast.set( bal );
 				_s2f->change_mc_bal();
-				if( blue_enable.get() == WL_WLAN ) {// update also client from Master
+				if( xcvMaster ) {// update also client from Master
 					delay( 500 );
 					OV.sendBallastChange( ballast.get(), false );
 				}
@@ -392,7 +392,7 @@ void Protocols::parseNMEA( char *astr ){
 				ESP_LOGI(FNAME,"New MC: %1.1f knots, %f", mc, mc_ms );
 				MC.set( Units::Vario( mc_ms ) );  // set mc according corresponding vario units
 				_s2f->change_mc_bal();
-				if( blue_enable.get() == WL_WLAN ) {// update also client from Master
+				if( xcvMaster ) {// update also client from Master
 					delay( 500 );
 					OV.sendMcChange( MC.get() );
 				}
@@ -405,7 +405,7 @@ void Protocols::parseNMEA( char *astr ){
 				ESP_LOGI(FNAME,"New Bugs: %d %%", mybugs);
 				bugs.set( mybugs );
 				_s2f->change_mc_bal();
-				if( blue_enable.get() == WL_WLAN ) {// update also client from Master
+				if( xcvMaster ) {// update also client from Master
 					delay( 500 );
 					OV.sendBugsChange( bugs.get() );
 				}
@@ -432,18 +432,25 @@ void Protocols::parseNMEA( char *astr ){
 			 */
 			// tbd: checksum check
 			// ESP_LOGI(FNAME,"parseNMEA, PXCV");
-			float _mc,_te,_bugs,_ballast, _temp, _qnh, _baro, _pitot, _roll, _pitch, _ax, _ay, _az;
+			float _te,_mc,_bugs,_ballast, _temp, _qnh, _baro, _pitot, _roll, _pitch, _ax, _ay, _az;
 			int _cs, _cruise;
 			sscanf( str, "$PXCV,%f,%f,%f,%f,%d,%f,%f,%f,%f,%f,%f,%f,%f,%f*%2x", &_te, &_mc, &_bugs, &_ballast,&_cruise, &_temp, &_qnh, &_baro, &_pitot, &_roll, &_pitch, &_ax, &_ay, &_az, &_cs  );
 			int calc_cs=calcNMEACheckSum( str );
 			if( _cs != calc_cs )
-				ESP_LOGW(FNAME,"CHECKSUM ERROR: %s; calculcated CS: %d != delivered CS %d", str, calc_cs, _cs );
-			else{
+				ESP_LOGW(FNAME,"CHECKSUM ERROR: %s; calculcated CS: %X != delivered CS %X", str, calc_cs, _cs );
+			else {
+				// must be slave
+				if ( xcvMaster ) {
+					xcvMaster = false; // transform to cable based slave with priority over wifi client
+				}
+				xcv_msg_count++;
 				TE = _te;
 				baroP = _baro;
 				dynamicP = _pitot;
 				float iasraw= Atmosphere::pascal2kmh( dynamicP );
 				Switch::setCruiseModeXCV( _cruise );
+				validTemperature = true;
+				temperature = _temp;
 				ias = ias + (iasraw - ias)*0.25;
 				tas += ( Atmosphere::TAS( iasraw , _baro, _temp) - tas)*0.25;
 				alt=Atmosphere::calcAltitude( QNH.get(), _baro );

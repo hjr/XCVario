@@ -501,7 +501,7 @@ void readTemp(void *pvParameters){
 		{
 			battery = Battery.get();
 			// ESP_LOGI(FNAME,"Battery=%f V", battery );
-			if( blue_enable.get() != WL_WLAN_CLIENT ) {  // client Vario will get Temperature info from main Vario
+			if( xcvMaster ) {  // client Vario will get Temperature info from main Vario
 				t = ds18b20.getTemp();
 				if( t ==  DEVICE_DISCONNECTED_C ) {
 					if( validTemperature == true ) {
@@ -845,7 +845,7 @@ void sensor(void *args){
 	}
 	ESP_LOGI(FNAME,"Now start T sensor test");
 	// Temp Sensor test
-	if( blue_enable.get() != WL_WLAN_CLIENT ) {
+	if( xcvMaster ) {
 		ESP_LOGI(FNAME,"Now start T sensor test");
 		ds18b20.begin();
 		temperature = ds18b20.getTemp();
@@ -1033,26 +1033,42 @@ void sensor(void *args){
 
 	Menu->begin( display, &Rotary, baroSensor, &Battery );
 
-	if ( blue_enable.get() == WL_WLAN_CLIENT ){
+	if ( blue_enable.get() == WL_WLAN_CLIENT || serial_client.get() ) {
 		display->clear();
 		display->writeText( 2, "Wait for Master XCVario" );
-		std::string ssid = WifiClient::scan();
-		if( ssid.length() ){
-			display->writeText( 3, "Master XCVario Found" );
-			char id[30];
-			sprintf( id, "Wifi ID: %s", ssid.c_str() );
-			display->writeText( 4, id );
-			display->writeText( 5, "Now start" );
-			WifiClient::start();
-			delay( 2000 );
-			inSetup = false;
-			display->clear();
+		if ( serial_client.get() ) {
+			// Connect client by wire with preference
+			int wait_count = 50; // 0.5sec
+			while ( xcv_msg_count == 0 ) {
+				delay( 10 );
+				if ( ! --wait_count ) break;
+			}
+			if ( xcv_msg_count > 0 ) {
+				xcvMaster = false;
+			}
 		}
-		else{
-			display->writeText( 3, "Abort Wifi Scan" );
+		if ( xcvMaster && blue_enable.get() == WL_WLAN_CLIENT ) {
+			// Second choice, connect by wifi
+			std::string ssid = WifiClient::scan();
+			if( ssid.length() ){
+				char id[30];
+				sprintf( id, "Wifi ID: %s", ssid.c_str() );
+				display->writeText( 3, id );
+				WifiClient::start();
+				xcvMaster = false;
+			}
+			else {
+				display->writeText( 3, "Abort Wifi scan" );
+				blue_enable.set(WL_DISABLE, false);
+			}
 		}
 	}
-	else if( ias < 50.0 ){
+	if ( ! xcvMaster ) {
+		display->writeText( 5, "Master XCVario found" );
+		delay( 1000 );
+		display->clear();
+	}
+	if( xcvMaster && ias < 50.0 ){
 		ESP_LOGI(FNAME,"QNH Autosetup, IAS=%3f (<50 km/h)", ias );
 		// QNH autosetup
 		float ae = elevation.get();
@@ -1106,14 +1122,14 @@ void sensor(void *args){
 	gpio_set_pull_mode(CS_bme280BA, GPIO_PULLUP_ONLY );
 	gpio_set_pull_mode(CS_bme280TE, GPIO_PULLUP_ONLY );
 
-	if( blue_enable.get() != WL_WLAN_CLIENT ) {
+	if( xcvMaster ) {
 		xTaskCreatePinnedToCore(&readBMP, "readBMP", 4096*2, NULL, 30, bpid, 0);
 	// }
 	// if( blue_enable.get() == WL_WLAN_CLIENT ){
 		xTaskCreatePinnedToCore(&audioTask, "audioTask", 4096, NULL, 30, bpid, 0);
 		Audio::startAudio();
 	}
-	xTaskCreatePinnedToCore(&readTemp, "readTemp", 4096, NULL, 6, tpid, 0);
+	xTaskCreatePinnedToCore(&readTemp, "readTemp", 2048, NULL, 6, tpid, 0);
 	xTaskCreatePinnedToCore(&drawDisplay, "drawDisplay", 8000, NULL, 13, dpid, 0);
 
 }
@@ -1125,12 +1141,14 @@ extern "C" void  app_main(void){
 	ESP_LOGI(FNAME,"Now init all Setup elements");
 	bool setupPresent;
 	SetupCommon::initSetup( setupPresent );
+	attitude_indicator.set(1);
 	if( !setupPresent ){
 		if( Cipher::init() )
 			attitude_indicator.set(1);
 	}
-	else
+	else {
 		ESP_LOGI(FNAME,"Setup already present");
+	}
 	esp_log_level_set("*", ESP_LOG_INFO);
 	sensor( 0 );
 	vTaskDelete( NULL );

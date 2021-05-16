@@ -124,7 +124,7 @@ std::string WifiClient::scan( void ){
 	ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
 	ESP_ERROR_CHECK(esp_wifi_start());
 	bool found = false;
-	while( !found ) {
+	while( !found && xcv_msg_count == 0 ) {
 		ESP_ERROR_CHECK(esp_wifi_scan_start(NULL, true));
 		ESP_ERROR_CHECK(esp_wifi_scan_get_ap_num(&ap_count));
 		ESP_LOGI(FNAME, "Total APs scanned = %u", ap_count);

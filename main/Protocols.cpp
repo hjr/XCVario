@@ -434,7 +434,7 @@ void Protocols::parseNMEA( char *astr ){
 			// ESP_LOGI(FNAME,"parseNMEA, PXCV");
 			float _mc,_te,_bugs,_ballast, _temp, _qnh, _baro, _pitot, _roll, _pitch, _ax, _ay, _az;
 			int _cs, _cruise;
-			sscanf( str, "$PXCV,%f,%f,%f,%f,%d,%f,%f,%f,%f,%f,%f,%f,%f,%f*%02x", &_te, &_mc, &_bugs, &_ballast,&_cruise, &_temp, &_qnh, &_baro, &_pitot, &_roll, &_pitch, &_ax, &_ay, &_az, &_cs  );
+			sscanf( str, "$PXCV,%f,%f,%f,%f,%d,%f,%f,%f,%f,%f,%f,%f,%f,%f*%2x", &_te, &_mc, &_bugs, &_ballast,&_cruise, &_temp, &_qnh, &_baro, &_pitot, &_roll, &_pitch, &_ax, &_ay, &_az, &_cs  );
 			int calc_cs=calcNMEACheckSum( str );
 			if( _cs != calc_cs )
 				ESP_LOGW(FNAME,"CHECKSUM ERROR: %s; calculcated CS: %d != delivered CS %d", str, calc_cs, _cs );
@@ -493,7 +493,7 @@ void Protocols::parseNMEA( char *astr ){
 			 */
 			float _alt, _qnh, _tas, _te, _mc, _ballast, _bugs;
 			int _cs;
-			sscanf(str, "!w,0,0,0,0,%f,%f,%f,%f,0,0,%f,%f,%f*%02x", &_alt, &_qnh, &_tas, &_te, &_mc, &_ballast, &_bugs, &_cs );
+			sscanf(str, "!w,0,0,0,0,%f,%f,%f,%f,0,0,%f,%f,%f*%2x", &_alt, &_qnh, &_tas, &_te, &_mc, &_ballast, &_bugs, &_cs );
 			int calc_cs=calcNMEACheckSum( str );
 			if( _cs != calc_cs )
 				ESP_LOGW(FNAME,"CHECKSUM ERROR: %s; calculcated CS: %d != delivered CS %d", str, calc_cs, _cs );
@@ -535,7 +535,7 @@ int Protocols::getNMEACheckSum(char * nmea) {
 		c = (unsigned char)nmea[i];
 		if (c == '*') break;
 	}
-	sscanf( &nmea[i],"*%02x", &cs );
+	sscanf( &nmea[i],"*%2x", &cs );
 	return cs;
 }
 

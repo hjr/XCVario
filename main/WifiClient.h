@@ -19,6 +19,7 @@ public:
 	static std::string scan();
 	static bool client_connected();
 	static void start();
+	static void stop();
 	static bool isConnected( int port=8880 );
 	static void wifi_connect();
 	static void event_handler(void* arg, esp_event_base_t event_base,int32_t event_id, void* event_data);
@@ -26,6 +27,7 @@ public:
 private:
 	static void tcp_client(void *pvParam);
 	static void initialise_wifi(void);
+	static void de_initialise_wifi(void);
 	static EventGroupHandle_t wifi_event_group;
 
 	static esp_netif_t *sta_netif;

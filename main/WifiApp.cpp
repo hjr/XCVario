@@ -194,10 +194,10 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
 void wifi_init_softap()
 {
 	if( blue_enable.get() == WL_WLAN ){
-		tcpip_adapter_init();
+		// tcpip_adapter_init();
 		ESP_LOGI(FNAME,"now esp_netif_init");
 		ESP_ERROR_CHECK(esp_netif_init());
-		ESP_ERROR_CHECK(esp_event_loop_create_default());
+		// ESP_ERROR_CHECK(esp_event_loop_create_default());
 		ESP_LOGI(FNAME,"now esp_event_handler_instance_register");
 		ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
 				ESP_EVENT_ANY_ID,

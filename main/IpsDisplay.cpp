@@ -600,6 +600,24 @@ void IpsDisplay::drawBT() {
 		btqueue = btq;
 		flarm_connected = Flarm::connected();
 	}
+	if( ! xcvMaster ) {
+		drawCable(BTH + 8 + 2);
+	}
+}
+
+void IpsDisplay::drawCable(int y)
+{
+	ucg_int_t ctx=DISPLAY_W-22;
+	ucg_int_t cty=y;
+	ucg->setColor( COLOR_WHITE );
+	ucg->drawLine( ctx, cty, ctx+BTW/2, cty );
+	ctx += BTW/2 + BTSIZE;
+	ucg->drawCircle( ctx, cty, BTSIZE, UCG_DRAW_UPPER_LEFT|UCG_DRAW_LOWER_LEFT);
+	// ucg->drawTriangle( btx+BTSIZE, bty-BTSIZE, btx+BTSIZE, bty+2*BTSIZE, btx, bty );
+	if ( xcv_msg_count > 0 ) ucg->setColor( COLOR_GREEN );
+	xcv_msg_count = 0;
+	ucg->drawLine( ctx, cty-BTSIZE/2, ctx+BTSIZE, cty-BTSIZE/2 );
+	ucg->drawLine( ctx, cty+BTSIZE/2, ctx+BTSIZE, cty+BTSIZE/2 );
 }
 
 void IpsDisplay::drawFlarm( int x, int y, bool flarm ) {
@@ -646,6 +664,19 @@ void IpsDisplay::drawWifi( int x, int y ) {
 		flarm_connected = Flarm::connected();
 		btqueue = btq;
 	}
+	if( ! xcvMaster ) {
+		drawCable(y + 2);
+	}
+}
+
+void IpsDisplay::drawConnection( int x, int y )
+{
+	if( blue_enable.get() == WL_BLUETOOTH )
+		drawBT();
+	else if( blue_enable.get() != WL_DISABLE )
+		drawWifi(x, y);
+	else if( ! xcvMaster )
+		drawCable((BTH/2) + 8);
 }
 
 void IpsDisplay::drawBat( float volt, int x, int y, bool blank ) {
@@ -806,10 +837,7 @@ void IpsDisplay::initULDisplay(){
 	ucg->setFont(ucg_font_fub11_hr);
 	ucg->setPrintPos(85,15);
 	ucg->print( Units::VarioUnit() );
-	if( blue_enable.get() == WL_BLUETOOTH )
-		drawBT();
-	if( blue_enable.get() == WL_WLAN  ||  blue_enable.get() == WL_WLAN_CLIENT )
-		drawWifi(DISPLAY_W-27, FLOGO+2 );
+	drawConnection(DISPLAY_W-27, FLOGO+2 );
 	drawThermometer(  10, 30 );
 }
 
@@ -835,10 +863,7 @@ void IpsDisplay::initRetroDisplay(){
 	ucg->setFont(ucg_font_fub11_hr);
 	ucg->setPrintPos(85,15);
 	ucg->print( Units::VarioUnit() );
-	if( blue_enable.get() == WL_BLUETOOTH )
-		drawBT();
-	if( blue_enable.get() == WL_WLAN  ||  blue_enable.get() == WL_WLAN_CLIENT )
-		drawWifi(DISPLAY_W-27, FLOGO+2 );
+	drawConnection(DISPLAY_W-27, FLOGO+2 );
 	drawMC( MC.get(), true );
 	drawThermometer(  10, 30 );
 }
@@ -1263,10 +1288,7 @@ void IpsDisplay::drawRetroDisplay( int airspeed_kmh, float te_ms, float ate_ms, 
 	// Bluetooth
 	if( !(tick%12) )
 	{
-		if( blue_enable.get() == WL_BLUETOOTH )
-			drawBT();
-		if( blue_enable.get() == WL_WLAN ||  blue_enable.get() == WL_WLAN_CLIENT )
-			drawWifi(DISPLAY_W-27, FLOGO+2 );
+		drawConnection(DISPLAY_W-27, FLOGO+2 );
 	}
 
 	// S2F Command triangle
@@ -1545,10 +1567,7 @@ void IpsDisplay::drawULDisplay( int airspeed_kmh, float te_ms, float ate_ms, flo
 	// Bluetooth
 	if( !(tick%12) )
 	{
-		if( blue_enable.get() == WL_BLUETOOTH )
-			drawBT();
-		if( blue_enable.get() == WL_WLAN ||  blue_enable.get() == WL_WLAN_CLIENT )
-			drawWifi(DISPLAY_W-27, FLOGO+2 );
+		drawConnection(DISPLAY_W-27, FLOGO+2 );
 	}
 
 	// Altitude Header
@@ -1820,10 +1839,7 @@ void IpsDisplay::drawAirlinerDisplay( int airspeed_kmh, float te_ms, float ate_m
 	// Bluetooth Symbol
 
 	if( !(tick%12) ){
-		if( blue_enable.get() == WL_BLUETOOTH )
-			drawBT();
-		if( blue_enable.get() == WL_WLAN || blue_enable.get() == WL_WLAN_CLIENT )
-			drawWifi(DISPLAY_W-25, FLOGO);
+		drawConnection(DISPLAY_W-25, FLOGO);
 	}
 
 	bool flarm=false;

@@ -83,6 +83,8 @@ void WifiClient::event_handler(void* arg, esp_event_base_t event_base, int32_t e
 	}
 }
 
+static esp_event_handler_instance_t instance_any_id;
+static esp_event_handler_instance_t instance_got_ip;
 
 void WifiClient::initialise_wifi(void)
 {
@@ -91,8 +93,6 @@ void WifiClient::initialise_wifi(void)
     ESP_ERROR_CHECK(esp_netif_init());
     //tcpip_adapter_init();
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    esp_event_handler_instance_t instance_any_id;
-    esp_event_handler_instance_t instance_got_ip;
     ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL, &instance_any_id));
     ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT,IP_EVENT_STA_GOT_IP, &event_handler, NULL, &instance_got_ip));
     // Initialize default station as network interface instance (esp-netif)
@@ -103,6 +103,20 @@ void WifiClient::initialise_wifi(void)
     ESP_ERROR_CHECK( esp_wifi_init(&cfg) );
     ESP_ERROR_CHECK( esp_wifi_set_mode(WIFI_MODE_STA) );
     ESP_ERROR_CHECK( esp_wifi_start() );
+}
+
+void WifiClient::de_initialise_wifi(void)
+{
+    ESP_ERROR_CHECK( esp_wifi_stop() );
+    ESP_ERROR_CHECK( esp_wifi_deinit() );
+    if( !sta_netif ) {
+        esp_wifi_clear_default_wifi_driver_and_handlers(sta_netif);
+        sta_netif = 0;
+    }
+    ESP_ERROR_CHECK(esp_event_handler_instance_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, instance_got_ip));
+    ESP_ERROR_CHECK(esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, instance_any_id));
+    ESP_ERROR_CHECK(esp_netif_deinit());
+    vEventGroupDelete(wifi_event_group);
 }
 
 #define DEFAULT_SCAN_LIST_SIZE 20
@@ -213,10 +227,22 @@ void WifiClient::tcp_client(void *setup){
     ESP_LOGI(FNAME, "tcp_client task closed\n");
 }
 
+static TaskHandle_t hXCVario = 0, hFLARM = 0;
 void WifiClient::start()
-{	
-	ESP_LOGI(FNAME, "start wifi_client"  );
+{
+    ESP_LOGI(FNAME, "start wifi_client"  );
     initialise_wifi();
-    xTaskCreate(&tcp_client,"tcp_client_xcv",4096,&XCVario,15,NULL);
-    xTaskCreate(&tcp_client,"tcp_client_flarm",4096,&FLARM,15,NULL);
+    xTaskCreate(&tcp_client,"tcp_client_xcv",4096,&XCVario,15, &hXCVario);
+    xTaskCreate(&tcp_client,"tcp_client_flarm",4096,&FLARM,15, &hFLARM);
 }
+
+void WifiClient::stop()
+{
+    ESP_LOGI(FNAME, "stop wifi_client");
+    de_initialise_wifi();
+    vTaskDelete(hXCVario);
+    hXCVario = 0;
+    vTaskDelete(hFLARM);
+    hFLARM = 0;
+}
+

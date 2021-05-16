@@ -1372,6 +1372,11 @@ void SetupMenu::setup( )
 			stxdis2->addEntry( "Enable");
 
 		}
+		SetupMenuSelect * rs232_client = new SetupMenuSelect( PROGMEM "RS232 Client", true , 0, true, &serial_client );
+		sye->addMenu( rs232_client );
+		rs232_client->setHelp( "Setup this XCV as client connected through one of the serial ports. This will be a preference to any wireless client connectity.");
+		rs232_client->addEntry( "Disable");
+		rs232_client->addEntry( "Enable");
 		SetupMenuSelect * nmea = new SetupMenuSelect( PROGMEM "NMEA Protocol", false , 0, true, &nmea_protocol );
 		sye->addMenu( nmea );
 		nmea->setHelp( "Setup the protocol used for sending NMEA sentences. This needs to be inline with the device driver chosen in XCSoar/LK8000");

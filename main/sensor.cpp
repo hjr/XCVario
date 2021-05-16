@@ -176,6 +176,8 @@ int count=0;
 bool flarmWarning = false;
 bool gLoadDisplay = false;
 int hold_alarm=0;
+bool xcvMaster=true;
+int xcv_msg_count = 0;
 
 float getTAS() { return tas; };
 float getTE() { return TE; };

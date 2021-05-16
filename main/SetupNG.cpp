@@ -118,6 +118,7 @@ SetupNG<int>  			serial2_tx_enable( "SER2_TX_ENA", 1 );
 SetupNG<int>  			software_update( "SOFTWARE_UPDATE", 0 );
 SetupNG<int>  			battery_display( "BAT_DISPLAY", 0 );
 SetupNG<int>  			airspeed_mode( "AIRSPEED_MODE", MODE_IAS );
+SetupNG<int>			serial_client( "SERIAL_CLIENT", false);
 SetupNG<int>  			nmea_protocol( "NMEA_PROTOCOL", OPENVARIO );
 SetupNG<int>		    log_level( "LOG_LEVEL", 3 );
 SetupNG<float>		    audio_factor( "AUDIO_FACTOR", 1 );

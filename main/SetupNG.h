@@ -351,6 +351,7 @@ extern SetupNG<int>  		serial2_tx_enable;
 extern SetupNG<int>  		software_update;
 extern SetupNG<int>  		battery_display;
 extern SetupNG<int>  		airspeed_mode;
+extern SetupNG<int>  		serial_client;
 extern SetupNG<int>  		nmea_protocol;
 extern SetupNG<int>		    log_level;
 extern SetupNG<float>		audio_factor;

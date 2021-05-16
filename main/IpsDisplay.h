@@ -111,8 +111,10 @@ private:
 	static void drawCircling( int x, int y, bool draw );
 	static void drawCruise( int x, int y, bool draw );
 	static void drawBT();
+	static void drawCable(int y);
 	static void drawFlarm( int x, int y, bool flarm );
 	static void drawWifi( int x, int y );
+	static void drawConnection( int x, int y );
 	static void drawBat( float volt, int x, int y, bool blank );
 	static void drawTemperature( int x, int y, float t );
 	static void drawThermometer( int x, int y );

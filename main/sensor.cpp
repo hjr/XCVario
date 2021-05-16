@@ -1106,14 +1106,14 @@ void sensor(void *args){
 
 	if( blue_enable.get() != WL_WLAN_CLIENT ) {
 		xTaskCreatePinnedToCore(&readBMP, "readBMP", 4096*2, NULL, 30, bpid, 0);
-	}
-	if( blue_enable.get() == WL_WLAN_CLIENT ){
+	// }
+	// if( blue_enable.get() == WL_WLAN_CLIENT ){
 		xTaskCreatePinnedToCore(&audioTask, "audioTask", 4096, NULL, 30, bpid, 0);
+		Audio::startAudio();
 	}
 	xTaskCreatePinnedToCore(&readTemp, "readTemp", 4096, NULL, 6, tpid, 0);
 	xTaskCreatePinnedToCore(&drawDisplay, "drawDisplay", 8000, NULL, 13, dpid, 0);
 
-	Audio::startAudio();
 }
 
 

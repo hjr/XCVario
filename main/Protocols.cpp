@@ -73,7 +73,7 @@ void Protocols::sendBallastChange( float ballast, bool external ){
 	float bal = (liters/max_bal)*10;
 	ballast_percent = bal*10;
 	if( external ){
-		sprintf( str,"!g,b%d\n\r", (int)(bal + 0.5));
+		sprintf( str,"!g,b%d\n\r", (int)std::round(bal));
 		ESP_LOGI(FNAME,"New ballast %f, cmd: %s", bal, str );
 		Router::sendXCV(str);
 	}
@@ -84,14 +84,14 @@ void Protocols::sendBallastChange( float ballast, bool external ){
 
 void Protocols::sendBugsChange( float bugs ){
 	char str[20];
-	sprintf( str,"!g,u%d\n", (int)(100-bugs));
+	sprintf( str,"!g,u%d\n", (int)std::round(100-bugs));
 	ESP_LOGI(FNAME,"New bugs %f, cmd: %s", bugs, str );
 	Router::sendXCV(str);
 }
 
 void Protocols::sendMcChange( float mc ){
 	char str[20];
-	sprintf( str,"!g,m%d\n", (int)(Units::ms2knots(mc)*10));
+	sprintf( str,"!g,m%d\n", (int)std::round(Units::ms2knots(mc)*10));
 	ESP_LOGI(FNAME,"New MC %f, cmd: %s", mc , str );
 	Router::sendXCV(str);
 }
@@ -102,7 +102,7 @@ int last_climb=-1000;
 void Protocols::sendMeanClimb( float climb ){
 	if( int(climb*10) != last_climb )
 	{
-		last_climb=int(climb*10);
+		last_climb=(int)std::round(climb*10);
 		char str[20];
 		sprintf( str,"!xa,%1.1f\n", climb );
 		ESP_LOGI(FNAME,"New mean climb value: %f, cmd:%s", climb, str );
@@ -335,7 +335,7 @@ void Protocols::parseNMEA( char *astr ){
 			float wkcmd;
 			sscanf( str,"!xw,%f", &wkcmd );  // directly scan into sensor variable
 			Flap::setLever( wkcmd );
-			// ESP_LOGI(FNAME,"XW command detected wk=%f", wksensor );
+			// ESP_LOGI(FNAME,"XW command detected wk=%f", wkcmd );
 		}
 		else if ( strncmp( str, "!xt,", 4 ) == 0 ) {
 			float temp;
@@ -391,8 +391,7 @@ void Protocols::parseNMEA( char *astr ){
 				float mc;
 				sscanf(str, "!g,m%f", &mc);
 				mc = mc*0.1;   // comes in knots*10, unify to knots
-				ESP_LOGI(FNAME,"New MC: %1.1f knots", mc);
-				float mc_ms =  Units::knots2ms(mc);
+				float mc_ms =  std::roundf(Units::knots2ms(mc)*10.f)/10.f; // hide rough knot resolution
 				ESP_LOGI(FNAME,"New MC: %1.1f knots, %f", mc, mc_ms );
 				MC.set( Units::Vario( mc_ms ) );  // set mc according corresponding vario units
 				_s2f->change_mc_bal();
@@ -423,7 +422,7 @@ void Protocols::parseNMEA( char *astr ){
 				EE = bugs degradation, 0 = clean to 30 %,
 				F.FF = Ballast 1.00 to 1.60,
 				G = 0 in climb, 1 in cruise,
-				HH = Outside airtemp in degrees celcius ( may have leading negative sign ),
+				HH.H = Outside airtemp in degrees celcius ( may have leading negative sign ),
 				QQQQ.Q = QNH e.g. 1013.2,
 				PPPP.P: static pressure in hPa,
 				QQQQ.Q: dynamic pressure in Pa,

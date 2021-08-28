@@ -471,7 +471,7 @@ void Protocols::parseNMEA( char *astr ){
 				ESP_LOGI(FNAME,"Final new ballast: %f ", bal);
 				ballast.set( bal );
 				_s2f->change_mc_bal();
-				if( wireless == WL_WLAN ) {// update also client from Master
+				if( wireless == WL_WLAN || the_can_mode == CAN_MODE_MASTER ) {// update also client from Master
 					delay( 500 );
 					OV.sendBallastChange( ballast.get(), false );
 				}
@@ -485,7 +485,7 @@ void Protocols::parseNMEA( char *astr ){
 				ESP_LOGI(FNAME,"New MC: %1.1f knots, %f", mc, mc_ms );
 				MC.set( Units::Vario( mc_ms ) );  // set mc according corresponding vario units
 				_s2f->change_mc_bal();
-				if( wireless == WL_WLAN ) {// update also client from Master
+				if( wireless == WL_WLAN || the_can_mode == CAN_MODE_MASTER ) {// update also client from Master
 					delay( 500 );
 					OV.sendMcChange( MC.get() );
 					ESP_LOGI(FNAME,"MC BG change detected, new MC %f", mc_ms );
@@ -498,7 +498,7 @@ void Protocols::parseNMEA( char *astr ){
 				ESP_LOGI(FNAME,"New Bugs: %d %%", mybugs);
 				bugs.set( mybugs );
 				_s2f->change_mc_bal();
-				if( wireless == WL_WLAN ) {// update also client from Master
+				if( wireless == WL_WLAN || the_can_mode == CAN_MODE_MASTER ) {// update also client from Master
 					delay( 500 );
 					OV.sendBugsChange( bugs.get() );
 				}
@@ -638,4 +638,3 @@ int Protocols::getNMEACheckSum(char * nmea) {
 	sscanf( &nmea[i],"*%02x", &cs );
 	return cs;
 }
-

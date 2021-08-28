@@ -155,6 +155,9 @@ void Router::routeS1(){
 		if( wireless == WL_BLUETOOTH )
 			if( forwardMsg( s1, bt_tx_q ))
 				ESP_LOGV(FNAME,"ttyS1 RX bytes %d forward to bt_tx_q", s1.length() );
+		if( the_can_mode == CAN_MODE_MASTER )
+			if( forwardMsg( s1, can_tx_q ))
+				ESP_LOGV(FNAME,"ttyS1 RX bytes %d forward to can_tx_q", s1.length() );
 		if( serial1_rxloop.get() )  // only 0=DISABLE | 1=ENABLE
 			if( forwardMsg( s1, s1_tx_q ))
 				ESP_LOGV(FNAME,"ttyS1 RX bytes %d looped to s1_tx_q", s1.length() );
@@ -249,7 +252,10 @@ void Router::routeBT(){
 void Router::routeCAN(){
 	SString can;
 	if( pullMsg( can_rx_q, can ) ){
+		if( the_can_mode == CAN_MODE_CLIENT && wireless == WL_BLUETOOTH ){
+			if( forwardMsg( can, bt_tx_q ) )
+				ESP_LOGV(FNAME,"Send to BT device, CAN received %d bytes", can.length() );
+		}
 		Protocols::parseNMEA( can.c_str() );
 	}
 }
-

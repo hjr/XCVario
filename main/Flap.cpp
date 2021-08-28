@@ -529,7 +529,7 @@ void  Flap::progress(){
 			else if( lever > flap_pos_max.get()+0.5 )
 				lever = flap_pos_max.get()+0.5;
 
-			if( wireless == WL_WLAN ) {
+			if( wireless == WL_WLAN || the_can_mode == CAN_MODE_MASTER ) {
 				if( leverold != (int)(lever*10) ){
 					OV.sendWkChange( lever );   // update secondary vario
 					leverold = (int)(lever*10);
@@ -648,4 +648,3 @@ int Flap::getOptimumInt( float speed )
 		return 1;
 	}
 }
-

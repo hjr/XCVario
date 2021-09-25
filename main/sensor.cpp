@@ -480,13 +480,13 @@ void readSensors(void *pvParameters){
 		}
 		Router::routeXCV();
 		// ESP_LOGI(FNAME,"Compass, have sensor=%d  hdm=%d ena=%d", compass.haveSensor(),  compass_nmea_hdt.get(),  compass_enable.get() );
-		if( compass_enable.get() == true  && !Flarm::bincom && ! Compass::calibrationIsRunning() ) {
+		if( compass_enable.get()  && !Flarm::bincom && ! Compass::calibrationIsRunning() ) {
 			// Trigger heading reading and low pass filtering. That job must be
 			// done periodically.
 
 			if( (count % 5 ) == 0 && compass_nmea_hdm.get() == true ) {
 				bool ok;
-				float heading = compass.magnHeading( &ok );
+				float heading = compass.getGyroHeading( &ok );
 				if( ok ) {
 					xSemaphoreTake( xMutex, portMAX_DELAY );
 					OV.sendNmeaHDM( heading );
@@ -495,7 +495,7 @@ void readSensors(void *pvParameters){
 			}
 			if( (count % 5 ) == 0 && compass_nmea_hdt.get() == true ) {
 				bool ok;
-				float theading = compass.trueHeading( &ok );
+				float theading = compass.getGyroHeading( &ok, true );
 				if( ok ){
 					xSemaphoreTake( xMutex, portMAX_DELAY );
 					OV.sendNmeaHDT( theading );
@@ -797,25 +797,7 @@ void sensor(void *args){
 	wireless_id += SetupCommon::getID();
 	display->writeText(line++, wireless_id.c_str() );
 
-	compass.setBus( &i2c_0 );
-	// Check for magnetic sensor / compass
-	if( compass_enable.get() ) {
-		compass.begin();
-		ESP_LOGI( FNAME, "Magnetic sensor enabled: initialize");
-		err = compass.selfTest();
-		if( err == ESP_OK )		{
-		// Activate working of magnetic sensor
-			ESP_LOGI( FNAME, "Magnetic sensor selftest: OKAY");
-			display->writeText( line++, "Compass: OK");
-			logged_tests += "Compass test: OK\n";
-		}
-		else{
-			ESP_LOGI( FNAME, "Magnetic sensor selftest: FAILED");
-			display->writeText( line++, "Compass: FAILED");
-			logged_tests += "Compass test: FAILED\n";
-			selftestPassed = false;
-		}
-	}
+
 
 	ESP_LOGI(FNAME,"Airspeed sensor init..  type configured: %d", airspeed_sensor_type.get() );
 	int offset;
@@ -1069,21 +1051,66 @@ void sensor(void *args){
 		display->writeText( line++, "Digital Poti: OK");
 	}
 
-	if(  can_speed.get() != CAN_SPEED_OFF )  // 2021 series 3, with new digital poti CAT5171 also features CAN bus
-		CANbus::begin( GPIO_NUM_26, GPIO_NUM_33 );
+	String resultCAN;
+	if( Audio::haveCAT5171() )
+	{
+		if( CANbus::selfTest() ){
+			resultCAN = "OK";
+			ESP_LOGE(FNAME,"CAN Bus selftest: OK");
+			logged_tests += "CAN Interface: OK\n";
+		}
+		else{
+			resultCAN = "FAIL";
+			logged_tests += "CAN Bus selftest: FAILED\n";
+			ESP_LOGE(FNAME,"Error: CAN Interface failed");
+		}
+	}
+
+	if(  can_speed.get() != CAN_SPEED_OFF && resultCAN == "OK" )  // 2021 series 3, or 2022 model with new digital poti CAT5171 also features CAN bus
+	{	ESP_LOGI(FNAME, "Now start CAN Bus Interface");
+		CANbus::begin();  // start CAN tasks and driver
+	}
 
 	float bat = Battery.get(true);
 	if( bat < 1 || bat > 28.0 ){
 		ESP_LOGE(FNAME,"Error: Battery voltage metering out of bounds, act value=%f", bat );
-		display->writeText( line++, "Bat Sensor: Failure");
+		if( resultCAN.length() )
+			display->writeText( line++, "Bat Meter/CAN: ");
+		else
+			display->writeText( line++, "Bat Meter/CAN: Fail/" + resultCAN );
 		logged_tests += "Battery Voltage Sensor: FAILED\n";
 		selftestPassed = false;
 	}
 	else{
 		ESP_LOGI(FNAME,"Battery voltage metering test PASSED, act value=%f", bat );
-		display->writeText( line++, "Bat Sensor: OK");
+		if( resultCAN.length() )
+			display->writeText( line++, "Bat Meter/CAN: OK/"+ resultCAN );
+		else
+			display->writeText( line++, "Bat Meter: OK");
 		logged_tests += "Battery Voltage Sensor: PASSED\n";
 	}
+
+	compass.setBus( &i2c_0 );
+	// Check for magnetic sensor / compass
+	if( compass_enable.get() ) {
+		compass.begin();
+		ESP_LOGI( FNAME, "Magnetic sensor enabled: initialize");
+		err = compass.selfTest();
+		if( err == ESP_OK )		{
+		// Activate working of magnetic sensor
+			ESP_LOGI( FNAME, "Magnetic sensor selftest: OKAY");
+			display->writeText( line++, "Compass: OK");
+			logged_tests += "Compass test: OK\n";
+		}
+		else{
+			ESP_LOGI( FNAME, "Magnetic sensor selftest: FAILED");
+			display->writeText( line++, "Compass: FAILED");
+			logged_tests += "Compass test: FAILED\n";
+			selftestPassed = false;
+		}
+	}
+
+
 	Serial::begin();
 	// Factory test for serial interface plus cable
 	if( abs(factory_volt_adjust.get() - 0.00815) < 0.00001 ) {

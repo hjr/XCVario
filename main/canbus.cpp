@@ -5,6 +5,7 @@
 #include "esp_err.h"
 #include "sensor.h"
 #include "Router.h"
+#include "QMC5883L.h"
 
 /*
  *  Code for a 1:1 connection between two XCVario with a fixed message ID
@@ -15,8 +16,8 @@
 
 int CANbus::_tick = 0;
 bool CANbus::can_ready = false;
-gpio_num_t CANbus::_tx_io;
-gpio_num_t CANbus::_rx_io;
+gpio_num_t CANbus::_tx_io = CAN_BUS_TX_PIN;
+gpio_num_t CANbus::_rx_io = CAN_BUS_RX_PIN;
 bool       CANbus::_connected;
 int        CANbus::_connected_timeout;
 
@@ -30,14 +31,13 @@ TaskHandle_t *cpid;
                                                                     .intr_flags = ESP_INTR_FLAG_LEVEL1}
 */
 
-#define MSG_ID 0x555
-
 
 // install/reinstall CAN driver in corresponding mode
 void CANbus::driverInstall( twai_mode_t mode, bool reinstall ){
 	if( reinstall ){
 		twai_stop();
 		twai_driver_uninstall();
+		delay(10);
 	}
 	twai_general_config_t g_config = TWAI_GENERAL_CONFIG_DEFAULT( _tx_io, _rx_io, mode );
 	twai_timing_config_t t_config;
@@ -53,6 +53,12 @@ void CANbus::driverInstall( twai_mode_t mode, bool reinstall ){
 		ESP_LOGI(FNAME,"CAN rate 1MBit");
 		t_config = TWAI_TIMING_CONFIG_1MBITS();
 	}
+	else{
+		if( !reinstall ) // need for testing a speed, even CAN is disabled.
+			ESP_LOGI(FNAME,"CAN rate 1MBit for selftest");
+			t_config = TWAI_TIMING_CONFIG_1MBITS();
+	}
+
 	twai_filter_config_t f_config = TWAI_FILTER_CONFIG_ACCEPT_ALL();
     //Install TWAI driver
 	if (twai_driver_install(&g_config, &t_config, &f_config) == ESP_OK) {
@@ -61,6 +67,7 @@ void CANbus::driverInstall( twai_mode_t mode, bool reinstall ){
 		ESP_LOGI(FNAME,"Failed to install driver");
 		return;
 	}
+	delay(10);
 	//Start TWAI driver
 	if (twai_start() == ESP_OK) {
 		ESP_LOGI(FNAME,"Driver started");
@@ -82,9 +89,15 @@ void canTask(void *pvParameters){
 	}
 }
 
+void::CANbus::restart(){
+	if( can_speed.get() == CAN_SPEED_OFF ){
+		return;
+	}
+	driverInstall( TWAI_MODE_NORMAL, true );
+}
 
 // begin CANbus, start selfTest and launch driver in normal (bidir) mode afterwards
-void CANbus::begin( gpio_num_t tx_io, gpio_num_t rx_io )
+void CANbus::begin()
 {
     //Initialize configuration structures using macro initializers
 	if( can_speed.get() == CAN_SPEED_OFF ){
@@ -92,16 +105,11 @@ void CANbus::begin( gpio_num_t tx_io, gpio_num_t rx_io )
 		return;
 	}
 	ESP_LOGI(FNAME,"CANbus::begin");
-	_tx_io = tx_io;
-	_rx_io = rx_io;
-    driverInstall( TWAI_MODE_NO_ACK );
     // Set RS pin
     // bus_off_io may operate invers, so for now set this here
     gpio_set_direction(GPIO_NUM_2, GPIO_MODE_OUTPUT);
     gpio_set_level(GPIO_NUM_2, 0 );
     delay(100);
-    can_ready = true;
-	selfTest();
 	driverInstall( TWAI_MODE_NORMAL, true );
 	xTaskCreatePinnedToCore(&canTask, "canTask", 4096, NULL, 8, cpid, 0);
 }
@@ -173,12 +181,17 @@ void CANbus::tick(){
 		// ESP_LOGI(FNAME,"CAN RX, msg: %s", nmea.c_str() );
 		Router::forwardMsg( nmea, can_rx_q );
 	}
+	else if( id == 0x031 ){
+		// ESP_LOGI(FNAME,"CAN RX MagSensor, msg: %d", bytes );
+		// ESP_LOG_BUFFER_HEXDUMP(FNAME, msg.c_str(), bytes, ESP_LOG_INFO);
+		QMC5883L::fromCAN( msg.c_str() );
+	}
+
 	if( !(_tick%4) )
 		Router::routeCAN();
 	if( !(_tick%50) )
 		sendData( 0x11, msg.c_str(), 1 ); // keep alive
 }
-
 
 bool CANbus::sendNMEA( const char *msg ){
 	if( !can_ready )
@@ -210,9 +223,10 @@ bool CANbus::sendNMEA( const char *msg ){
 	return ret;
 }
 
-
 bool CANbus::selfTest(){
 	ESP_LOGI(FNAME,"CAN bus selftest");
+	can_ready = true;
+	driverInstall( TWAI_MODE_NO_ACK );
 	gpio_set_direction(GPIO_NUM_2, GPIO_MODE_OUTPUT);
 	gpio_set_level(GPIO_NUM_2, 0 );
 	delay(100);
@@ -226,6 +240,7 @@ bool CANbus::selfTest(){
 		if( !sendData( id, tx,len, 1 ) ){
 			ESP_LOGW(FNAME,"CAN bus selftest TX FAILED");
 		}
+		delay(10);
 		char msg[12];
 		int rxid;
 		int bytes = receive( &rxid, msg, 5 );
@@ -280,6 +295,4 @@ bool CANbus::sendData( int id, const char* msg, int length, int self ){
 		return false;
 	}
 }
-
-
 

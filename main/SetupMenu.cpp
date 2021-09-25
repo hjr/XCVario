@@ -879,8 +879,9 @@ void SetupMenu::setup( )
 
 		SetupMenuSelect * compSensor = new SetupMenuSelect( "Sensor Option", false, compass_ena, true, &compass_enable);
 		compSensor->addEntry( "Disable");
-		compSensor->addEntry( "Enable");
-		compSensor->addEntry( "Enable, no Tilt Correction");
+		compSensor->addEntry( "Enable I2C");
+		compSensor->addEntry( "Enable I2C, no Tilt Corr.");
+		compSensor->addEntry( "Enable CAN Sensor");
 
 		compSensor->setHelp( PROGMEM "Option to enable/disable the Compass Sensor" );
 		compassME->addMenu( compSensor );
@@ -1024,7 +1025,7 @@ void SetupMenu::setup( )
 		devlp->setPrecision(3);
 		devlp->setHelp(PROGMEM "Lowpass factor for deviation table correction from reverse wind calculation");
 
-		SetupMenuValFloat *wlpf = new SetupMenuValFloat( "Averager", nullptr, "", 5, 50, 1, nullptr, false, &wind_filter_lowpass );
+		SetupMenuValFloat *wlpf = new SetupMenuValFloat( "Averager", nullptr, "", 5, 300, 1, nullptr, false, &wind_filter_lowpass );
 		strWindM->addMenu( wlpf );
 		wlpf->setPrecision(0);
 		wlpf->setHelp(PROGMEM "Number of measurements used for straight flight live wind averager");

@@ -814,20 +814,23 @@ void IpsDisplay::drawWindArrow( float a, float speed, int type ){
 	float co=cos(D2R(a));
 	const int b=9; // width of the arrow
 	int s=speed*0.6;
+	int s2=s;
 	if( s>30 )
-		s=30;   // maximum space we got on the display
+		s2=30;   // maximum space we got on the display
+	if( s<10 )
+		s2=10;    // minimum size, otherwise arrow is not readable
 
-	int xn_0 = rint(X-s*si);    // tip
-	int yn_0 = rint(Y+s*co);
+	int xn_0 = rint(X-s2*si);    // tip
+	int yn_0 = rint(Y+s2*co);
 
-	int xn_1 = rint(X+s*si - b*co);  // left back
-	int yn_1 = rint(Y-s*co - b*si);
+	int xn_1 = rint(X+s2*si - b*co);  // left back
+	int yn_1 = rint(Y-s2*co - b*si);
 
-	int xn_3 = rint(X+s*si + b*co);  // right back
-	int yn_3 = rint(Y-s*co + b*si);
+	int xn_3 = rint(X+s2*si + b*co);  // right back
+	int yn_3 = rint(Y-s2*co + b*si);
 
-	int xn_2 = rint(X +(s*si*0.2));  // tip of second smaller arrow in red
-	int yn_2 = rint(Y -(s*co*0.2));
+	int xn_2 = rint(X+(s2*si*0.2));  // tip of second smaller arrow in red
+	int yn_2 = rint(Y-(s2*co*0.2));
 
 	// ESP_LOGI(FNAME,"IpsDisplay::drawWindArrow  x0:%d y0:%d x1:%d y1:%d x2:%d y2:%d x3:%d y3:%d", (int)xn_0, (int)yn_0, (int)xn_1 ,(int)yn_1, (int)xn_2, (int)yn_2, (int)xn_3 ,(int)yn_3 );
 	if( del_wind ) {  // cleanup previous incarnation
@@ -844,15 +847,15 @@ void IpsDisplay::drawWindArrow( float a, float speed, int type ){
 		wx3 = xn_3;
 		wy3 = yn_3;
 	}
-	if( s > 5 ) {  // draw white and red arror
-		ucg->setColor( COLOR_WHITE );
-		if( wind_reference.get() != WR_NORTH )
-			Flarm::drawAirplane( xn_0, yn_0, false, true ); // draw a small airplane symbol
+	ucg->setColor( COLOR_WHITE );
+	if( wind_reference.get() != WR_NORTH )
+		Flarm::drawAirplane( xn_0, yn_0, false, true ); // draw a small airplane symbol
+	if( s > 5 ){
 		ucg->drawTriangle(xn_0,yn_0,xn_1,yn_1,xn_3,yn_3);
 		ucg->setColor(  COLOR_RED  );
 		ucg->drawTriangle(xn_2,yn_2,xn_1,yn_1,xn_3,yn_3);
-		del_wind = true;
 	}
+	del_wind = true;
 }
 
 void IpsDisplay::initULDisplay(){
@@ -1113,7 +1116,7 @@ void IpsDisplay::drawCompass(){
 				if( (wind_reference.get() & WR_HEADING) )  // wind relative to airplane, first choice compass, second is GPS true course
 				{
 					bool ok;
-					float heading = Compass::trueHeading( &ok );
+					float heading = Compass::filteredTrueHeading( &ok );
 					if( !ok && Flarm::gpsStatus() )            // fall back to GPS course
 						heading = Flarm::getGndCourse();
 					dir = Vector::angleDiffDeg( winddir, heading );
@@ -1130,7 +1133,7 @@ void IpsDisplay::drawCompass(){
 	}
 	else if( wind_display.get() & WD_COMPASS ){
 		bool ok;
-		int heading = static_cast<int>(rintf(Compass::trueHeading( &ok )));
+		int heading = static_cast<int>(rintf(Compass::filteredTrueHeading( &ok )));
 		if( heading >= 360 )
 			heading -= 360;
 		// ESP_LOGI(FNAME, "heading %d, valid %d", heading, Compass::headingValid() );
@@ -1159,27 +1162,38 @@ void IpsDisplay::drawCompass(){
 }
 // Compass or Wind Display for ULStyle
 void IpsDisplay::drawULCompass(){
-
-	if( wind_enable.get() != WA_OFF ){
-		// ESP_LOGI(FNAME, "WIND calc on %d", wind_enable.get() );
+	// ESP_LOGI(FNAME, "drawULCompass: %d ", wind_display.get() );
+	if( (wind_display.get() & WD_DIGITS) || (wind_display.get() & WD_ARROW) ){
 		int winddir=0;
 		float wind=0;
 		bool ok=false;
-		int age;
+		int ageStraight, ageCircling;
 		char type = '/';
-		if( wind_enable.get() == WA_STRAIGHT ){
-			ok = theWind.getWind( &winddir, &wind, &age );
+		if( wind_enable.get() == WA_STRAIGHT ){  // check what kind of wind is available from calculator
+			ok = theWind.getWind( &winddir, &wind, &ageStraight );
 			type = '|';
 		}
 		else if( wind_enable.get() == WA_CIRCLING ){
-			ok = CircleWind::getWind( &winddir, &wind, &age );
+			ok = CircleWind::getWind( &winddir, &wind, &ageCircling );
 		}
-		else if( wind_enable.get() == WA_BOTH ){
-			ok = theWind.getWind( &winddir, &wind, &age );
-			type = '|';
-			if( !ok ){
-				ok = CircleWind::getWind( &winddir, &wind, &age );
+		else if( wind_enable.get() == WA_BOTH ){  // dynamically change type depening on younger calculation
+			int wds, wdc;
+			float ws, wc;
+			bool oks, okc;
+			oks = theWind.getWind( &wds, &ws, &ageStraight );
+			okc = CircleWind::getWind( &wdc, &wc, &ageCircling);
+			if( oks && ageStraight < ageCircling ){
+				wind = ws;
+				winddir = wds;
+				type = '|';
+				ok = true;
+			}
+			else if( okc && ageCircling < ageStraight )
+			{
+				wind = wc;
+				winddir = wdc;
 				type = '/';
+				ok = true;
 			}
 		}
 		// ESP_LOGI(FNAME, "WIND dir %d, speed %f, ok=%d", winddir, wind, ok );
@@ -1190,35 +1204,66 @@ void IpsDisplay::drawULCompass(){
 			ucg->setFont(ucg_font_fub17_hf);
 			char s[12];
 			int windspeed = (int)( Units::Airspeed(wind)+0.5 );
-			if( ok )
-				sprintf(s,"%3d\xb0%c%2d", winddir, type, windspeed );
-			else
-				sprintf(s,"%s", "    --/--" );
-			if( windspeed < 10 )
-				ucg->printf("%s   ", s);
-			else if( windspeed < 100 )
-				ucg->printf("%s  ", s);
-			else
-				ucg->printf("%s ", s);
+			if( wind_display.get() & WD_DIGITS ){
+				if( ok )
+					sprintf(s,"%3d\xb0%c%2d", winddir, type, windspeed );
+				else
+					sprintf(s,"%s", "    --/--" );
+				if( windspeed < 10 )
+					ucg->printf("%s    ", s);
+				else if( windspeed < 100 )
+					ucg->printf("%s   ", s);
+				else
+					ucg->printf("%s  ", s);
+			}
 			prev_heading = winddir;
+			if( wind_display.get() & WD_ARROW  ){
+				float dir=winddir;  // absolute wind related to geographic north
+				if( (wind_reference.get() & WR_HEADING) )  // wind relative to airplane, first choice compass, second is GPS true course
+				{
+					bool ok;
+					float heading = Compass::filteredTrueHeading( &ok );
+					if( !ok && Flarm::gpsStatus() )            // fall back to GPS course
+						heading = Flarm::getGndCourse();
+					dir = Vector::angleDiffDeg( winddir, heading );
+				}
+				else if( (wind_reference.get() & WR_GPS_COURSE) ){
+					if( Flarm::gpsStatus() ){
+						float heading = Flarm::getGndCourse();
+						dir = Vector::angleDiffDeg( winddir, heading );
+					}
+				}
+				drawWindArrow( dir, windspeed, 0 );
+			}
 		}
 	}
+//	else if( wind_display.get() & WD_COMPASS ){
+//	allways draw compass if possible and enabled
 	if( compass_enable.get() && compass_calibrated.get() ){
 		bool ok;
-		int heading = static_cast<int>(rintf(Compass::trueHeading( &ok )));
+		int heading = static_cast<int>(rintf(Compass::filteredTrueHeading( &ok )));
 		if( heading >= 360 )
 			heading -= 360;
 		// ESP_LOGI(FNAME, "heading %d, valid %d", heading, Compass::headingValid() );
 		if( prev_heading != heading || !(tick%16) ){
+			ucg->setPrintPos(113,220);
 			ucg->setColor(  COLOR_WHITE  );
 			ucg->setFont(ucg_font_fub20_hf);
-			ucg->setPrintPos(113,220);
 			char s[14];
 			if( ok )
 				sprintf(s,"%3d\xb0", heading );
 			else
 				sprintf(s,"%s", "  ---" );
-			ucg->printf("%s    ", s);
+
+			if( heading < 10 )
+				ucg->printf("%s    ", s);
+			else if( heading < 100 )
+				ucg->printf("%s   ", s);
+			else
+				ucg->printf("%s  ", s);
+//			ucg->setFont(ucg_font_fub20_hf);
+//			ucg->setPrintPos(120+ucg->getStrWidth(s),105);
+//			ucg->printf("\xb0 ");
 			prev_heading = heading;
 		}
 	}

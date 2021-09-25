@@ -35,14 +35,24 @@ Quaternion quaternion_from_gyro(float wx, float wy, float wz, float time)
     return result;
 }
 
+Quaternion quaternion_from_compass(float wx, float wy, float wz )
+{
+    // wx,wy,wz in radians
+    float a,b,c,d;
+    b = (-wx);
+    c = (-wy);
+    d = (-wz);
+    a = 1 - 0.5*(b*b+c*c+d*d);
+    Quaternion result = quaternion_initialize(a,b,c,d);
+    return result;
+}
+
 float fusion_coeffecient(vector_ijk virtual_gravity, vector_ijk sensor_gravity)
 {
     float dot = vector_3d_dot_product(sensor_gravity,virtual_gravity);
-
     if (dot<=0.96)
-        return 40.0;
-
-    return 10.0;
+       return 90.0;
+    return 30.0;
 }
 
 vector_ijk sensor_gravity_normalized(int16_t ax, int16_t ay, int16_t az)
@@ -64,9 +74,18 @@ vector_ijk fuse_vector(vector_ijk virtual_gravity, vector_ijk sensor_gravity)
     return result;
 }
 
+static float gyro_yaw_delta = 0;
+
+float getGyroYawDelta(){
+	return gyro_yaw_delta;
+}
+
 vector_ijk update_gravity_vector(vector_ijk gravity_vector,float wx,float wy,float wz,float delta)
 {
     Quaternion q_gyro = quaternion_from_gyro(wx,wy,wz,delta);
+    euler_angles e = quaternion_to_euler_angles(q_gyro);
+    // ESP_LOGI(FNAME,"e.yaw=%.3f ", e.yaw );
+    gyro_yaw_delta = e.yaw;
     gravity_vector = quaternion_rotate_vector(gravity_vector,q_gyro);
     return gravity_vector;
 }

@@ -72,19 +72,19 @@ SetupNG<int>  			alt_select( "ALT_SELECT" , AS_BARO_SENSOR );
 SetupNG<int>  			fl_auto_transition( "FL_AUTO" , 0 );
 SetupNG<int>  			alt_display_mode( "ALT_DISP_MODE" , MODE_QNH );
 SetupNG<float>  		transition_alt( "TRANS_ALT", 50 );   // Transition Altitude
-SetupNG<int>  			glider_type( "GLIDER_TYPE", 0 );
-SetupNG<int>  			glider_type_index( "GLIDER_TYPE_IDX", 0 );
+SetupNG<int>  			glider_type( "GLIDER_TYPE", 0 , true, SYNC_FROM_MASTER);
+SetupNG<int>  			glider_type_index( "GLIDER_TYPE_IDX", 0, true, SYNC_FROM_MASTER );
 SetupNG<int>  			ps_display( "PS_DISPLAY", 1 );
 
 SetupNG<float>  		as_offset( "AS_OFFSET" , -1 );
-SetupNG<float>  		bat_low_volt( "BAT_LOW_VOLT" , 11.5 );
-SetupNG<float>  		bat_red_volt( "BAT_RED_VOLT", 11.75 );
-SetupNG<float>  		bat_yellow_volt( "BAT_YELLOW_VOLT" , 12.0 );
-SetupNG<float>  		bat_full_volt( "BAT_FULL_VOLT", 12.8 );
+SetupNG<float>  		bat_low_volt( "BAT_LOW_VOLT" , 11.5, true, SYNC_FROM_MASTER );
+SetupNG<float>  		bat_red_volt( "BAT_RED_VOLT", 11.75 , true, SYNC_FROM_MASTER);
+SetupNG<float>  		bat_yellow_volt( "BAT_YELLOW_VOLT" , 12.0, true, SYNC_FROM_MASTER );
+SetupNG<float>  		bat_full_volt( "BAT_FULL_VOLT", 12.8, true, SYNC_FROM_MASTER );
 SetupNG<float>  		core_climb_period( "CORE_CLIMB_P" , 60 );
 SetupNG<float>  		core_climb_min( "CORE_CLIMB_MIN" , 0.5 );
 SetupNG<float>  		core_climb_history( "CORE_CLIMB_HIST" , 45 );
-SetupNG<float>  		elevation( "ELEVATION", -1 );
+SetupNG<float>  		elevation( "ELEVATION", -1, true, SYNC_BIDIR );
 SetupNG<float>  		default_volume( "DEFAULT_VOL", 10.0 );
 SetupNG<float>  		max_volume( "MAXI_VOL", 60.0 );
 SetupNG<float>  		frequency_response( "FREQ_RES", 30.0 );
@@ -95,13 +95,13 @@ SetupNG<float>  		factory_volt_adjust("FACT_VOLT_ADJ" , 0.00815, false );
 SetupNG<float>  		bugs( "BUGS", 0.0 );
 SetupNG<int>  			display_type( "DISPLAY_TYPE",  UNIVERSAL );
 SetupNG<int>  			display_orientation("DISPLAY_ORIENT" , 0 );
-SetupNG<int>  			flap_enable( "FLAP_ENABLE", 0 );
-SetupNG<float>  		flap_minus_3( "FLAP_MINUS_3", 200 );
-SetupNG<float>  		flap_minus_2( "FLAP_MINUS_2", 165 );
-SetupNG<float>  		flap_minus_1( "FLAP_MINUS_1", 105);
-SetupNG<float>  		flap_0( "FLAP_0", 88 );
-SetupNG<float>  		flap_plus_1( "FLAP_PLUS_1", 78 );
-SetupNG<float>  		flap_plus_2( "FLAP_PLUS_2", 70 );
+SetupNG<int>  			flap_enable( "FLAP_ENABLE", 0, true, SYNC_FROM_MASTER );
+SetupNG<float>  		flap_minus_3( "FLAP_MINUS_3", 200, true, SYNC_FROM_MASTER );
+SetupNG<float>  		flap_minus_2( "FLAP_MINUS_2", 165, true, SYNC_FROM_MASTER );
+SetupNG<float>  		flap_minus_1( "FLAP_MINUS_1", 105, true, SYNC_FROM_MASTER);
+SetupNG<float>  		flap_0( "FLAP_0", 88, true, SYNC_FROM_MASTER );
+SetupNG<float>  		flap_plus_1( "FLAP_PLUS_1", 78, true, SYNC_FROM_MASTER );
+SetupNG<float>  		flap_plus_2( "FLAP_PLUS_2", 70, true, SYNC_FROM_MASTER );
 SetupNG<int>  			alt_unit( "ALT_UNIT", 0 );
 SetupNG<int>  			ias_unit( "IAS_UNIT", 0 );
 SetupNG<int>  			vario_unit( "VARIO_UNIT", 0 );
@@ -158,8 +158,8 @@ SetupNG<int>            flarm_warning( "FLARM_LEVEL", 1 );
 SetupNG<int>            flarm_sim( "FLARM_SIM", 0 );
 SetupNG<float>          flarm_volume( "FLARM_VOL", 100 );
 SetupNG<int>            flap_sensor( "FLAP_SENS", 0, false );
-SetupNG<float>          flap_pos_max("FL_POS_M", +2);
-SetupNG<float>          flap_neg_max("FL_NEG_M", -2);
+SetupNG<float>          flap_pos_max("FL_POS_M", +2, true, SYNC_FROM_MASTER);
+SetupNG<float>          flap_neg_max("FL_NEG_M", -2, true, SYNC_FROM_MASTER);
 SetupNG<int>            compass_enable( "CP_ENABLE", 0 );
 SetupNG<float>          compass_dev_0( "CP_DEV_0", 0 );
 SetupNG<float>          compass_dev_45( "CP_DEV_45", 0 );
@@ -195,14 +195,14 @@ SetupNG<float> 			wind_max_deviation("WIND_MDEV", 30.0 );
 SetupNG<float> 			wind_as_min( "WIND_ASM", 25 );
 SetupNG<int> 			s2f_with_gload( "S2G_GLOAD", 1 );       // considering g load in S2F
 SetupNG<int> 			s2f_blockspeed( "S2G_BLOCKSPEED", 0 );  // considering netto vario and g load for S2F or not
-SetupNG<int> 			wk_label_plus_3( "WKLP3", 32);  //  L
-SetupNG<int> 			wk_label_plus_2( "WKLP2", 11);  //  2
-SetupNG<int> 			wk_label_plus_1( "WKLP1", 10);  //  1
-SetupNG<int> 			wk_label_null_0( "WKL0",   9);  //  0
-SetupNG<int> 			wk_label_minus_1( "WKLM1", 8);  // -1
-SetupNG<int> 			wk_label_minus_2( "WKLM2", 7);  // -2
-SetupNG<int> 			wk_label_minus_3( "WKLM3", 33); //  S
-SetupNG<float>       	flap_takeoff("FLAPTO", 1 );
+SetupNG<int> 			wk_label_plus_3( "WKLP3", 32, true, SYNC_FROM_MASTER);  //  L
+SetupNG<int> 			wk_label_plus_2( "WKLP2", 11, true, SYNC_FROM_MASTER);  //  2
+SetupNG<int> 			wk_label_plus_1( "WKLP1", 10, true, SYNC_FROM_MASTER);  //  1
+SetupNG<int> 			wk_label_null_0( "WKL0",   9, true, SYNC_FROM_MASTER);  //  0
+SetupNG<int> 			wk_label_minus_1( "WKLM1", 8, true, SYNC_FROM_MASTER);  // -1
+SetupNG<int> 			wk_label_minus_2( "WKLM2", 7, true, SYNC_FROM_MASTER);  // -2
+SetupNG<int> 			wk_label_minus_3( "WKLM3", 33, true, SYNC_FROM_MASTER); //  S
+SetupNG<float>       	flap_takeoff("FLAPTO", 1, true, SYNC_FROM_MASTER );
 SetupNG<int> 			audio_disable( "AUDIS", 0 );
 SetupNG<int>			vario_mode("VAMOD", CRUISE_NETTO );  // switch to netto mode when cruising
 SetupNG<int>			airspeed_sensor_type("PTYPE", PS_NONE, false);
@@ -234,21 +234,23 @@ void SetupCommon::sendSetup( e_sync_t sync, const char *key, char type, void *va
 	ESP_LOGI(FNAME,"sendSetup(): key=%s, type=%c, len=%d", key, type, len );
 	char str[40];
 	char sender;
-	if( wireless == WL_WLAN && (sync & SYNC_FROM_MASTER) )              // or cable master tbd.
+	if( ((wireless == WL_WLAN) || (the_can_mode == CAN_MODE_MASTER)) && (sync & SYNC_FROM_MASTER) ) {
 		sender='M';
-	else if( ((wireless == WL_WLAN_CLIENT) || (the_can_mode == CAN_MODE_CLIENT)) && (sync & SYNC_FROM_CLIENT) )  // or cable client tbd.
+    }
+	else if( ((wireless == WL_WLAN_CLIENT) || (the_can_mode == CAN_MODE_CLIENT)) && (sync & SYNC_FROM_CLIENT) ) {
 		sender='C';
-	else
-		sender='U';
-	if( sender != 'U' ) {
-		int l = sprintf( str,"!xs%c,%s,%c,%d,", sender, key, type, len );
-		if( type == 'F' )
-			sprintf( str+l,"%f\n", *(float*)(value) );
-		else if( type == 'I' )
-			sprintf( str+l,"%d\n", *(int*)(value) );
-		ESP_LOGI(FNAME,"Setup data: %s", str );
-		Router::sendXCV(str);
-	}
+    }
+	else {
+		return;
+    }
+    // Push setting
+    int l = sprintf( str,"!xs%c,%s,%c,%d,", sender, key, type, len );
+    if( type == 'F' )
+        sprintf( str+l,"%f\n", *(float*)(value) );
+    else if( type == 'I' )
+        sprintf( str+l,"%d\n", *(int*)(value) );
+    ESP_LOGI(FNAME,"Setup data: %s", str );
+    Router::sendXCV(str);
 }
 
 SetupCommon * SetupCommon::getMember( const char * key ){
@@ -263,7 +265,7 @@ SetupCommon * SetupCommon::getMember( const char * key ){
 
 void SetupCommon::syncEntry( int entry ){
 	// ESP_LOGI(FNAME,"SetupCommon::syncEntry( %d )", entry );
-	if( wireless == WL_WLAN || wireless == WL_WLAN_CLIENT || the_can_mode == CAN_MODE_CLIENT ) {
+	if( wireless == WL_WLAN || wireless == WL_WLAN_CLIENT || the_can_mode == CAN_MODE_MASTER || the_can_mode == CAN_MODE_CLIENT ) {
 		// ESP_LOGI(FNAME,"We are wireless type=%d", wireless );
 		if( entry  < entries.size() ) {
 			entries[entry]->sync();
@@ -362,4 +364,3 @@ char * SetupCommon::getID() {
 	}
 	return _ID;
 }
-

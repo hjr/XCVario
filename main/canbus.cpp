@@ -1,11 +1,19 @@
-#include "driver/gpio.h"
-#include "logdef.h"
+
 #include "canbus.h"
-#include "string.h"
-#include "esp_err.h"
+
 #include "sensor.h"
 #include "Router.h"
 #include "QMC5883L.h"
+
+
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+
+#include "driver/gpio.h"
+#include "logdef.h"
+#include "esp_err.h"
+
+#include <cstring>
 
 /*
  *  Code for a 1:1 connection between two XCVario with a fixed message ID
@@ -15,13 +23,15 @@
  */
 
 int CANbus::_tick = 0;
-bool CANbus::can_ready = false;
+bool CANbus::_ready_initialized = false;
 gpio_num_t CANbus::_tx_io = CAN_BUS_TX_PIN;
 gpio_num_t CANbus::_rx_io = CAN_BUS_RX_PIN;
 bool       CANbus::_connected;
 int        CANbus::_connected_timeout;
+bool       CANbus::_master_present = false; // todo, create connect event
 
-TaskHandle_t *cpid;
+
+static TaskHandle_t cpid;
 
 /*
 #define MY_TWAI_GENERAL_CONFIG_DEFAULT(tx_io_num, rx_io_num, op_mode) {.mode = op_mode, .tx_io = tx_io_num, .rx_io = rx_io_num,     \
@@ -33,11 +43,9 @@ TaskHandle_t *cpid;
 
 
 // install/reinstall CAN driver in corresponding mode
-void CANbus::driverInstall( twai_mode_t mode, bool reinstall ){
-	if( reinstall ){
-		twai_stop();
-		twai_driver_uninstall();
-		delay(10);
+void CANbus::driverInstall( twai_mode_t mode ){
+	if( _ready_initialized ){
+        driverUninstall();
 	}
 	twai_general_config_t g_config = TWAI_GENERAL_CONFIG_DEFAULT( _tx_io, _rx_io, mode );
 	twai_timing_config_t t_config;
@@ -54,9 +62,8 @@ void CANbus::driverInstall( twai_mode_t mode, bool reinstall ){
 		t_config = TWAI_TIMING_CONFIG_1MBITS();
 	}
 	else{
-		if( !reinstall ) // need for testing a speed, even CAN is disabled.
-			ESP_LOGI(FNAME,"CAN rate 1MBit for selftest");
-			t_config = TWAI_TIMING_CONFIG_1MBITS();
+		ESP_LOGI(FNAME,"CAN rate 1MBit for selftest");
+		t_config = TWAI_TIMING_CONFIG_1MBITS();
 	}
 
 	twai_filter_config_t f_config = TWAI_FILTER_CONFIG_ACCEPT_ALL();
@@ -71,15 +78,30 @@ void CANbus::driverInstall( twai_mode_t mode, bool reinstall ){
 	//Start TWAI driver
 	if (twai_start() == ESP_OK) {
 		ESP_LOGI(FNAME,"Driver started");
+        _ready_initialized = true;
+        // Set RS pin
+        // bus_off_io may operate invers, so for now set this here
+      	gpio_set_direction(GPIO_NUM_2, GPIO_MODE_OUTPUT);
+    	gpio_set_level(GPIO_NUM_2, 0 );
+	    delay(100);
 	} else {
+        twai_driver_uninstall();
 		ESP_LOGI(FNAME,"Failed to start driver");
-		return;
 	}
 }
 
+void CANbus::driverUninstall(){
+    if( _ready_initialized ){
+        _ready_initialized = false;
+		twai_stop();
+		twai_driver_uninstall();
+        gpio_set_level(GPIO_NUM_2, 1 );
+		delay(10);
+	}
+}
 
 void canTask(void *pvParameters){
-	while (1) {
+	while (true) {
 		CANbus::tick();
 		if( (CANbus::_tick % 100) == 0) {
 			// ESP_LOGI(FNAME,"Free Heap: %d bytes", heap_caps_get_free_size(MALLOC_CAP_8BIT) );
@@ -93,7 +115,7 @@ void::CANbus::restart(){
 	if( can_speed.get() == CAN_SPEED_OFF ){
 		return;
 	}
-	driverInstall( TWAI_MODE_NORMAL, true );
+	driverInstall( TWAI_MODE_NORMAL );
 }
 
 // begin CANbus, start selfTest and launch driver in normal (bidir) mode afterwards
@@ -105,18 +127,13 @@ void CANbus::begin()
 		return;
 	}
 	ESP_LOGI(FNAME,"CANbus::begin");
-    // Set RS pin
-    // bus_off_io may operate invers, so for now set this here
-    gpio_set_direction(GPIO_NUM_2, GPIO_MODE_OUTPUT);
-    gpio_set_level(GPIO_NUM_2, 0 );
-    delay(100);
-	driverInstall( TWAI_MODE_NORMAL, true );
-	xTaskCreatePinnedToCore(&canTask, "canTask", 4096, NULL, 8, cpid, 0);
+	driverInstall( TWAI_MODE_NORMAL );
+
+	xTaskCreatePinnedToCore(&canTask, "canTask", 4096, nullptr, 8, &cpid, 0);
+
 }
 
 // receive message of corresponding ID
-SString nmea;
-
 int CANbus::receive( int *id, char *msg, int timeout ){
 	twai_message_t rx;
 	esp_err_t ret = twai_receive(&rx, pdMS_TO_TICKS(timeout) );
@@ -137,8 +154,7 @@ int rx_pos=0;
 // hook this into another task to save memory
 void CANbus::tick(){
 	_tick++;
-	if( !can_ready ){
-		// ESP_LOGI(FNAME,"CANbus not ready");
+	if( !_ready_initialized ){
 		return;
 	}
 	SString msg;
@@ -167,6 +183,8 @@ void CANbus::tick(){
 		if( _connected_timeout > 100 )
 			_connected = false;
 	}
+    // receive message of corresponding ID
+    static SString nmea;
 	if( id == 0x20 ) {     // start of nmea
 		// ESP_LOGI(FNAME,"CAN RX Start of frame");
 		nmea.clear();
@@ -194,8 +212,9 @@ void CANbus::tick(){
 }
 
 bool CANbus::sendNMEA( const char *msg ){
-	if( !can_ready )
+	if( !_ready_initialized ){
 		return false;
+    }
 	int len=strlen(msg);
 	// ESP_LOGI(FNAME,"send CAN NMEA len %d, msg: %s", len, msg );
 	bool ret = true;
@@ -225,11 +244,7 @@ bool CANbus::sendNMEA( const char *msg ){
 
 bool CANbus::selfTest(){
 	ESP_LOGI(FNAME,"CAN bus selftest");
-	can_ready = true;
 	driverInstall( TWAI_MODE_NO_ACK );
-	gpio_set_direction(GPIO_NUM_2, GPIO_MODE_OUTPUT);
-	gpio_set_level(GPIO_NUM_2, 0 );
-	delay(100);
 	bool res=false;
 	int id=0x100;
 	for( int i=0; i<10; i++ ){
@@ -250,25 +265,22 @@ bool CANbus::selfTest(){
 			delay(10*i);
 		}
 		else if( memcmp( msg ,tx, len ) == 0 ){
-			ESP_LOGW(FNAME,"+++ CAN bus selftest TX/RX OKAY +++");
 			res=true;
 			break;
 		}
 	}
     if( res ){
-    	ESP_LOGI(FNAME,"CAN bus selftest TX/RX OKAY");
-    	return true;
+    	ESP_LOGW(FNAME,"CAN bus selftest TX/RX OKAY");
     }else{
     	ESP_LOGW(FNAME,"CAN bus selftest TX/RX FAILED");
-    	can_ready = false;
+    	driverUninstall();
     }
-    return false;
+    return _ready_initialized;
 }
 
 bool CANbus::sendData( int id, const char* msg, int length, int self ){
 	// ESP_LOGI(FNAME,"CANbus::send %d bytes, msg %s, self %d", length, msg, self );
-	if( !can_ready ){
-		// ESP_LOGI(FNAME,"CANbus not ready, abort");
+	if( !_ready_initialized ){
 		return false;
 	}
 	gpio_set_direction(GPIO_NUM_2, GPIO_MODE_OUTPUT);
@@ -295,4 +307,3 @@ bool CANbus::sendData( int id, const char* msg, int length, int self ){
 		return false;
 	}
 }
-

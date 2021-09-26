@@ -19,13 +19,15 @@ public:
 	static bool selfTest();
 	static int _tick;
 	static bool connected() { return _connected; };
-	static bool isOkay() { return can_ready; };
+	static bool isOkay() { return _ready_initialized; };
 
 private:
-	static void driverInstall( twai_mode_t mode, bool reinstall=false );
-	static bool can_ready;
+	static void driverInstall( twai_mode_t mode );
+	static void driverUninstall();
+	static bool _ready_initialized;
 	static gpio_num_t _tx_io;
 	static gpio_num_t _rx_io;
 	static bool _connected;
 	static int _connected_timeout;
+    static bool _master_present;
 };

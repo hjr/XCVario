@@ -86,7 +86,7 @@ void WifiClient::event_handler(void* arg, esp_event_base_t event_base, int32_t e
 
 void WifiClient::initialise_wifi(void)
 {
-    esp_log_level_set("wifi", ESP_LOG_DEBUG); // disable wifi driver logging
+    esp_log_level_set("wifi", ESP_LOG_NONE); // disable wifi driver logging
     wifi_event_group = xEventGroupCreate();
     ESP_ERROR_CHECK(esp_netif_init());
     tcpip_adapter_init();
@@ -238,7 +238,7 @@ void WifiClient::tcp_client(void *setup){
 }
 
 void WifiClient::start()
-{	
+{
 	ESP_LOGI(FNAME, "start wifi_client"  );
     initialise_wifi();
     xTaskCreate(&tcp_client,"tcp_client_xcv",4096,&XCVario,15,NULL);

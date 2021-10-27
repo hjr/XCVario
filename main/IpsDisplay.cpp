@@ -176,7 +176,7 @@ static float linGaugeIdx(const float val)
 	return val * _scale_k;
 }
 static float (*_gauge)(float) = &linGaugeIdx;
-static int   needle_pos_old = 0; // -pi/2 .. pi/2
+static int   needle_pos_old = 0; // -pi/2 .. pi/2 * sinconScale
 
 // get sin/cos position from gauge index in rad
 static inline int precal_scaled_idx(const float val) { return (int)(abs(val)*sincosScale)&(SINCOS_OVER_110-1); }
@@ -567,7 +567,7 @@ void IpsDisplay::redrawValues()
 	s2f_level_prev = 0;
 	btqueue = -1;
 	_te=-200;
-	needle_pos_old=-1000;
+	needle_pos_old = -M_PI_2*sincosScale;
 	mcalt = -100;
 	as_prev = -1;
 	_ate = -200;
@@ -998,43 +998,88 @@ void IpsDisplay::drawOneScaleLine( float a, int16_t l1, int16_t l2, int16_t w, u
 	ucg->drawTetragon(xn_0,yn_0,xn_1,yn_1,xn_2,yn_2,xn_3,yn_3);
 }
 
-// -pi/2 < val < pi/2, center x, y, start radius, end radius, width, r,g,b
-void IpsDisplay::drawPolarIndicator( float a, int16_t l1, int16_t l2, int16_t w, ucg_color_t color)
+// -pi/2*sincosScale < val < pi/2*sincosScale, center x, y, start radius, end radius, width, r,g,b
+void IpsDisplay::drawPolarIndicator( int val, int16_t l1, int16_t l2, int16_t w, ucg_color_t color)
 {
-	static ucg_int_t x_0 = 0;
-	static ucg_int_t y_0 = 0;
-	static ucg_int_t x_1 = 1;
-	static ucg_int_t y_1 = 1;
-	static ucg_int_t x_2 = 1;
-	static ucg_int_t y_2 = -1;
+	typedef struct Triangle {
+		ucg_int_t x_0, y_0, x_1, y_1, x_2, y_2, dx;
+	} Triangle_t;
+	static Triangle_t o;
+	Triangle_t n;
 
 	if( _menu ) return;
+	if ( val == needle_pos_old ) return;
 
-	int val = (int)(a*sincosScale); // discrete steps
-	float si=mySin(val);
-	float co=myCos(val);
-	float psi=gaugeSin(val,l1);
-	float pco=gaugeCos(val,l1);
+	if ( std::abs(val-needle_pos_old) > 7 ) {
 
-	ucg_int_t xn_0 = pco+w*si;
-	ucg_int_t yn_0 = psi-w*co;
-	ucg_int_t xn_1 = pco-w*si;
-	ucg_int_t yn_1 = psi+w*co;
-	ucg_int_t xn_2 = gaugeCos(val, l2);
-	ucg_int_t yn_2 = gaugeSin(val, l2);
-	// ESP_LOGI(FNAME,"IpsDisplay::drawTetragon  x0:%d y0:%d x1:%d y1:%d x2:%d y2:%d x3:%d y3:%d", (int)xn_0, (int)yn_0, (int)xn_1 ,(int)yn_1, (int)xn_2, (int)yn_2, (int)xn_3 ,(int)yn_3 );
+		float si=mySin(val);
+		float co=myCos(val);
+		float psi=gaugeSin(val,l1);
+		float pco=gaugeCos(val,l1);
 
-	// cleanup previous incarnation
-	ucg->setColor( COLOR_BLACK );
-	ucg->drawTriangle(x_0,y_0,x_1,y_1,x_2,y_2);
-	ucg->setColor( color.color[0], color.color[1], color.color[2] );
-	ucg->drawTriangle(xn_0,yn_0,xn_1,yn_1,xn_2,yn_2);
-	x_0 = xn_0;
-	y_0 = yn_0;
-	x_1 = xn_1;
-	y_1 = yn_1;
-	x_2 = xn_2;
-	y_2 = yn_2;
+		n.x_0 = pco+w*si; // top shoulder
+		n.y_0 = psi-w*co;
+		n.x_1 = pco-w*si; // lower shoulder
+		n.y_1 = psi+w*co;
+		n.x_2 = gaugeCos(val, l2); // tip
+		n.y_2 = gaugeSin(val, l2);
+		// ESP_LOGI(FNAME,"IpsDisplay::drawTetragon  x0:%d y0:%d x1:%d y1:%d x2:%d y2:%d x3:%d y3:%d", (int)xn_0, (int)yn_0, (int)xn_1 ,(int)yn_1, (int)xn_2, (int)yn_2, (int)xn_3 ,(int)yn_3 );
+
+		// cleanup previous incarnation
+		ucg->setColor( COLOR_BLACK );
+		ucg->drawTriangle(o.x_0,o.y_0,o.x_1,o.y_1,o.x_2,o.y_2);
+		ucg->setColor( color.color[0], color.color[1], color.color[2] );
+		ucg->drawTriangle(n.x_0,n.y_0,n.x_1,n.y_1,n.x_2,n.y_2);
+		o = n;
+	}
+	else {
+		int inc = (val-needle_pos_old > 0) ? 1 : -1;
+		for ( int i = needle_pos_old+inc; i != val; i+=inc ) {
+			float si=mySin(i);
+			float co=myCos(i);
+			float psi=gaugeSin(i,l1);
+			float pco=gaugeCos(i,l1);
+
+			n.x_0 = pco+w*si; // top shoulder
+			n.y_0 = psi-w*co;
+			n.x_1 = pco-w*si; // lower shoulder
+			n.y_1 = psi+w*co;
+			n.x_2 = gaugeCos(i, l2); // tip
+			n.y_2 = gaugeSin(i, l2);
+
+			int16_t dx = (std::abs(i) < sincosScale*M_PI_2/2) ? 0 : 1;
+			int16_t dy = !dx;
+			n.dx = dx;
+			// ESP_LOGI(FNAME,"val %d d%d", val, dx);
+
+			// buf one edge
+			ucg->setColor( color.color[0], color.color[1], color.color[2] );
+			if ( val > needle_pos_old ) { // up
+				ucg->drawLine(n.x_2,n.y_2,n.x_0,n.y_0); // top pointer line
+				ucg->drawLine(n.x_2+dy,n.y_2+dx,n.x_0+dy,n.y_0+dx);
+			} else {
+				ucg->drawLine(n.x_2,n.y_2,n.x_1,n.y_1); // lower line
+				ucg->drawLine(n.x_2+dy,n.y_2-dx,n.x_1+dy,n.y_1-dx);
+			}
+
+			// cut the other one
+			dx = o.dx; dy = !dx;
+			ucg->setColor( COLOR_BLACK );
+			if ( val > needle_pos_old ) { // up
+				ucg->drawLine(o.x_2,o.y_2,o.x_1,o.y_1); // lower line
+				ucg->drawLine(o.x_2,o.y_2,o.x_1-dy,o.y_1+dx);
+				ucg->drawLine(o.x_2-dy,o.y_2+dx,o.x_1-dy,o.y_1+dx);
+			} else {
+				ucg->drawLine(o.x_2,o.y_2,o.x_0,o.y_0); // top pointer line
+				ucg->drawLine(o.x_2,o.y_2,o.x_0-dy,o.y_0-dx);
+				ucg->drawLine(o.x_2-dy,o.y_2-dx,o.x_0-dy,o.y_0-dx);
+			}
+			// trim inner edge
+			ucg->drawLine(o.x_0+1,o.y_0,o.x_1+1,o.y_1);
+			// shift to old
+			o = n;
+		}
+	}
 	needle_pos_old = val;
 }
 
@@ -1069,12 +1114,7 @@ void IpsDisplay::drawPolarSinkBow( float a, int16_t l1)
 			int ye = y - sinIncr(i, 5);
 			ucg->drawLine(x, y, xe, ye);
 			int d = std::signbit(i)?-1:1;
-			if ( std::abs(i) < sincosScale ) {
-				ucg->drawLine(x, y+d, xe, ye+d);
-			}
-			else {
-				ucg->drawLine(x-1, y, xe-1, ye);
-			}
+			ucg->drawLine(x, y+d, xe, ye+d);
 		}
 		else ucg->setColor(COLOR_BLUE);
 	}
@@ -1116,12 +1156,7 @@ void IpsDisplay::drawBow( float a, int16_t l1)
 			int ye = y - sinIncr(i, 5);
 			ucg->drawLine(x, y, xe, ye);
 			int d = std::signbit(i)?-1:1;
-			if ( std::abs(i) < sincosScale ) {
-				ucg->drawLine(x, y+d, xe, ye+d);
-			}
-			else {
-				ucg->drawLine(x-1, y, xe-1, ye);
-			}
+			ucg->drawLine(x, y+d, xe, ye+d);
 		}
 		else ucg->setColor(c.color[0], c.color[1], c.color[2]);
 	}
@@ -1214,7 +1249,7 @@ void IpsDisplay::drawOneLabel( float val, int16_t labl, int16_t pos, int16_t off
 	pos += (M_PI_2-std::abs(val))/M_PI_2 * 10; // increase pos towards 0
 	x=gaugeCos(val*to_side, pos);
 	y=gaugeSin(val*to_side, pos) +1;
-	ucg->setColor(COLOR_LBLUE);
+	ucg->setColor(COLOR_BBLUE);
 	ucg->setPrintPos(x,y);
 	if ( offset != 0 ) {
 		ucg->printf("%+d", labl+offset );
@@ -1528,8 +1563,8 @@ void IpsDisplay::drawLoadDisplay( float loadFactor ){
 		screens_init |= INIT_DISPLAY_GLOAD;
 	}
 	// draw G pointer
-	float a = (*_gauge)(loadFactor-1.);
-	if( int(a*100) != int(needle_pos_old*100) ) {
+	int a = (int)((*_gauge)(loadFactor-1.) * sincosScale);
+	if( a != needle_pos_old ) {
 		drawPolarIndicator( a, 70, 129, 7, needlecolor[0] );
 		// ESP_LOGI(FNAME,"IpsDisplay::drawRetroDisplay  TE=%0.1f  x0:%d y0:%d x2:%d y2:%d", te, x0, y0, x2,y2 );
 	}
@@ -1751,7 +1786,7 @@ void IpsDisplay::drawRetroDisplay( int airspeed_kmh, float te_ms, float ate_ms, 
 
 	// S2F Command triangle
 	if( (((int)s2fd != s2fdalt && !((tick+1)%2) ) || !((tick+3)%30)) && !ulmode ) {
-		// static float s=0; && check he bar code
+		// static float s=0; // check the bar code
 		// s2fd = sin(s) * 42.;
 		// s+=0.04;
 		drawS2FBar(AMIDX, AMIDY,(int)s2fd);
@@ -1782,25 +1817,28 @@ void IpsDisplay::drawRetroDisplay( int airspeed_kmh, float te_ms, float ate_ms, 
 	}
 
 	// get TE pointer position in rad
-	float needle_pos = (*_gauge)(te);
+	int needle_idx = (int)((*_gauge)(te) * sincosScale);
 	// draw TE pointer
-	if( int(needle_pos*1000.) != int(needle_pos_old*1000.) ) {
-		drawPolarIndicator( needle_pos, 80, 132, 9, needlecolor[needle_color.get()] );
+	if( true || needle_idx != needle_pos_old ) {
+		// static int s=0, inc=1;
+		// if ( s < -sincosScale*M_PI_2+70 ) inc=1;
+		// if ( s > sincosScale*M_PI_2-70 ) inc=-1;
+		// needle_idx = s+=inc;
+		drawPolarIndicator( needle_idx, 80, 132, 9, needlecolor[needle_color.get()] );
 		// ESP_LOGI(FNAME,"IpsDisplay::drawRetroDisplay  TE=%0.1f  x0:%d y0:%d x2:%d y2:%d", te, x0, y0, x2,y2 );
 
 		// Check overlap on inner values
-		if ( needle_pos < -M_PI_2*60./90. ) alt_dirty = true;
-		if ( needle_pos > M_PI_2*75./90. ) speed_dirty = true;
+		if ( needle_idx < -M_PI_2*60./90.*sincosScale ) alt_dirty = true;
+		if ( needle_idx > M_PI_2*75./90.*sincosScale ) speed_dirty = true;
 
 		// Draw colored bow
-		float val = (needle_pos>0.) ? needle_pos : 0.;
+		float val = (needle_idx>0.) ? needle_idx/sincosScale : 0.;
 		// draw green/red vario bar
 		drawBow(val, 134);
 
 		if( ! netto && ps_display.get() ) {
 			drawPolarSinkBow((*_gauge)(polar_sink), 134);
 		}
-		needle_pos_old = needle_pos;
 	}
 
 	// Battery

@@ -48,6 +48,24 @@ void DataLink::process( const char *packet, int len, int port ) {
 	// ESP_LOG_BUFFER_HEXDUMP(FNAME,packet, len, ESP_LOG_INFO);
 	ubxFound = false;
 	nmeaFound = false;
+	if ( port == 42 ) {
+		static char log[400];
+		static int count = 0;
+		if ( *packet == '!' && *(packet+1) == 'x' && *(packet+2) == 'l') {
+			if ( count > 0 ) {
+				log[count] = '\0';
+				ESP_LOGW(FNAME, "%s", log);
+			}
+			count = len-3;
+			memcpy(log, packet+3, count);
+		}
+		else if ( count < 399 ) {
+			len = std::min(399-count, len);
+			memcpy(log+count, packet, len);
+			count += len;
+		}
+		return;
+	}
 	if( Flarm::bincom ){  // neither UBX nor NMEA, for Flarm bincom protocol transparent forward
 		// ESP_LOGI(FNAME, "Port S%1d: Flarm::bincom = true", port);
 		routeSerialData(packet, len, port, false );

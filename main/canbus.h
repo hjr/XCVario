@@ -6,6 +6,8 @@
 #define CAN_BUS_TX_PIN GPIO_NUM_26
 #define CAN_BUS_RX_PIN GPIO_NUM_33
 
+void can_log(const char* tag, const char*, ...);
+
 class SString;
 
 class CANbus {

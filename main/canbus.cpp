@@ -21,8 +21,35 @@
 #include "Flarm.h"
 #include "DataLink.h"
 
+#include <cstdarg>
+
 DataLink dlink;
 DataLink dlinkXs;  // use a second CAN id and dataling to avoid checksum errors by mixed up messages
+
+void can_log(const char* tag, const char* fmt, ...)
+{
+	char buf[400];
+	va_list args;
+	va_start(args, fmt);
+	int len = vsnprintf(buf, 400, fmt, args);
+	va_end(args);
+	if ( len > 0 ) {
+		if ( len > 399 ) len = 399;
+	}
+	else return; // mal formatted
+	char *cptr = buf;
+	while ( len > 0 ) {
+		char msg[80];
+		memcpy(msg, "!xl", 3);
+		int chunk_size = std::min(len, 80-4);
+		memcpy(msg+3, cptr, chunk_size);
+		len -= chunk_size;
+		msg[chunk_size+3] = '\0';
+		SString xlog(msg);
+		Router::forwardMsg( xlog, can_tx_q );
+	}
+	
+}
 
 /*
  *  Code for a 1:1 connection between two XCVario with a fixed message ID
@@ -321,6 +348,9 @@ void CANbus::rxtick(int tick){
 			DM.monitorString( MON_CAN, DIR_RX, msg.c_str(), true );
 			_connected_timeout_magsens = 0;
 		}
+		if ( id == 0x51 ) {
+			dlink.process(msg.c_str(), msg.length(), 42);
+		}
 		bytes = receive( &id, msg, 10 );
 	}
 }
@@ -345,6 +375,9 @@ bool CANbus::sendNMEA( const SString& msg ){
 	int id = 0x20;
 	if( !strncmp( msg.c_str(), "!xs", 3) )  // segregate internal NMEA by different id for !xs
 		id = 0x21;
+	if ( !strncmp( msg.c_str(), "!xl", 3) ) {
+		id = 0x51;
+	}
 	const char *cptr = msg.c_str();
 	int len = msg.length(); // Including the terminating \0 -> need to remove this one byte at RX from strlen
 	while( len > 0 )

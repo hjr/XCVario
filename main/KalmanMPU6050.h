@@ -20,7 +20,10 @@
 #define _KalmanMPU6050_H_
 
 #include "Arduino.h"
-#include "quaternion.h"
+#include "vector_3d.h"
+
+class Quaternion;
+struct euler_angles;
 
 #ifndef M_PI
 #define M_PI 3.14159265359
@@ -74,42 +77,42 @@ public:
    * 
    * @returns The accelerometer raw X reading
    */
-  static inline double getRawAccelX()  {  return accelX;  };
+  static inline double getRawAccelX()  { return accel.a; };
 
   /**
    * Gets the accelerometer raw Y reading, as per last read() call.
    * 
    * @returns The accelerometer raw Y reading
    */
-  static inline double getRawAccelY()   {   return accelY;   };
+  static inline double getRawAccelY()   { return accel.b; };
 
   /**
    * Gets the accelerometer raw Z reading, as per last read() call.
    * 
    * @returns The accelerometer raw Z reading
    */
-  static inline double getRawAccelZ()  {  	return accelZ;  };
+  static inline double getRawAccelZ()  { return accel.c; };
 
   /**
    * Gets the gyroscope raw X reading, as per last read() call.
    * 
    * @returns The gyroscope raw X reading.
    */
-  static inline double getRawGyroX()   {  	return gyroX;  };
+  static inline double getRawGyroX()   { return gyro.a; };
 
   /**
    * Gets the gyroscope raw Y reading, as per last read() call.
    * 
    * @returns The gyroscope raw Y reading.
    */
-  static inline double getRawGyroY()   {  	return gyroY;  };
+  static inline double getRawGyroY()   { return gyro.b; };
 
   /**
    * Gets the gyroscope raw Z reading, as per last read() call.
    * 
    * @returns The gyroscope raw Z reading.
    */
-  static inline double getRawGyroZ()   {  return gyroZ;  };
+  static inline double getRawGyroZ()   { return gyro.c; };
 
 
   /**
@@ -134,15 +137,20 @@ public:
   static inline double getYaw()  { return filterYaw;  }
   static double getPitchRad();
 
-  static inline double getGyroRate()  {	return abs(gyroX)+abs(gyroY)+abs(gyroZ); }
+  static inline double getGyroRate()  {	return abs(gyro.a)+abs(gyro.b)+abs(gyro.c); }
+
+  // Reference calibration
+  static void getAccelSamplesAndCalib(int side);
+  static void defaultImuReference(bool topDown=false);
+  static void getGyroSamplesAndZero();
 
 private:
   static Kalman kalmanX; // Create the Kalman instances
   static Kalman kalmanY;
   static Kalman kalmanZ;
 
-  static double accelX, accelY, accelZ;
-  static double gyroX, gyroY, gyroZ;
+  static vector_d accel;
+  static vector_d gyro;
   static float ax1,ay1,az1;
   static float positiveG;
   static double kalXAngle, kalYAngle;
@@ -163,7 +171,10 @@ private:
   static vector_ijk att_vector;
   static euler_angles euler;
 
-
+  // Reference
+  static int progress; // bit-wise 0 -> 1 -> 3 -> 0 // start -> right -> left -> finish
+  static vector_d bob_right_wing, bob_left_wing;
+  static Quaternion ref_rot;
 };
 
 #endif // _KalmanMPU6050_H_

@@ -121,8 +121,6 @@ AdaptUGC *MYUCG = 0;  // ( SPI_DC, CS_Display, RESET_Display );
 IpsDisplay *display = 0;
 CenterAid  *centeraid = 0;
 
-bool topDown = false;
-
 OTA *ota = 0;
 
 ESPRotary Rotary;
@@ -192,6 +190,7 @@ int active_screen = 0;  // 0 = Vario
 float mpu_target_temp=45.0;
 
 AdaptUGC *egl = 0;
+
 
 #define GYRO_FS (mpud::GYRO_FS_250DPS)
 
@@ -922,11 +921,6 @@ void system_startup(void *args){
 		hardwareRevision.set(XCVARIO_20);
 	}
 
-	if( display_orientation.get() ){
-		ESP_LOGI( FNAME, "TopDown display mode flag set");
-		topDown = true;
-	}
-
 	wireless = (e_wireless_type)(wireless_type.get()); // we cannot change this on the fly, so get that on boot
 	AverageVario::begin();
 	stall_alarm_off_kmh = stall_speed.get()/3;
@@ -1006,10 +1000,8 @@ void system_startup(void *args){
 		MPU.setDigitalLowPassFilter(mpud::DLPF_5HZ);  // smoother data
 		mpud::raw_axes_t gb = gyro_bias.get();
 		mpud::raw_axes_t ab = accl_bias.get();
-		char ahrs[30];
-		if( (gb.isZero() || ab.isZero()) || ahrs_autozero.get() ) {
+		if( 0 ) { // gb.isZero() ) {
 			ESP_LOGI( FNAME,"MPU computeOffsets");
-			ahrs_autozero.set(0);
 			MPU.computeOffsets( &ab, &gb );  // returns Offsets in 16G scale
 			gyro_bias.set( gb );
 			accl_bias.set( ab );
@@ -1020,10 +1012,9 @@ void system_startup(void *args){
 			MPU.setAccelOffset(ab);
 			MPU.setGyroOffset(gb);
 		}
-		delay( 500 );
 		mpud::raw_axes_t accelRaw;
 		float accel = 0;
-		for( auto i=0; i<11; i++ ){
+		for( auto i=0; i<10; i++ ){
 			esp_err_t err = MPU.acceleration(&accelRaw);  // fetch raw data from the registers
 			if( err != ESP_OK )
 				ESP_LOGE(FNAME, "AHRS acceleration I2C read error");
@@ -1033,6 +1024,7 @@ void system_startup(void *args){
 			if( i>0 )
 				accel += accelG[0];
 		}
+		char ahrs[30];
 		sprintf( ahrs,"AHRS Sensor: OK (%.2f g)", accel/10 );
 		display->writeText( line++, ahrs );
 		logged_tests += "MPU6050 AHRS test: PASSED\n";

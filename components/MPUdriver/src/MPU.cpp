@@ -999,18 +999,10 @@ accelZ = accelG[0];
 esp_err_t MPU::acceleration(raw_axes_t* accel)
 {
 	if (MPU_ERR_CHECK(readBytes(regs::ACCEL_XOUT_H, 6, buffer))) return err;
-	if( topDown ){
-		accel->x = -(buffer[0] << 8 | buffer[1]);   // real Z
-		accel->y = -(buffer[2] << 8 | buffer[3]);    // real Y
-		accel->z = (buffer[4] << 8 | buffer[5]);    // real -X
-
-	}else
-	{
-		accel->x = buffer[0] << 8 | buffer[1];
-		accel->y = buffer[2] << 8 | buffer[3];
-		accel->z = buffer[4] << 8 | buffer[5];
-	}
-	// MPU_LOGI("MPU acc: x:%d y:%d z:%d", accel->x, accel->y, accel->z );
+	accel->x = buffer[0] << 8 | buffer[1];
+	accel->y = buffer[2] << 8 | buffer[3];
+	accel->z = buffer[4] << 8 | buffer[5];
+	// MPU_LOGI("accel:\t%d\t%d\t%d", accel->x, accel->y, accel->z);
 	return err;
 }
 

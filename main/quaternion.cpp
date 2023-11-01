@@ -29,10 +29,11 @@ float Quaternion::getAngle() const
     return 2.f * std::acos(a);
 }
 
-// should be the cross product
+// concatenatin of two quaternions
 Quaternion operator*(const Quaternion& q1, const Quaternion& q2)
 {
-    //q = q1*q2
+    // q = q1*q2 -- IMPORTANT: read the "*" operator as "after"
+    //                         q1*q2 is first rotating q2, then q1 (!)
     Quaternion q( (q1.a*q2.a) - (q1.b*q2.b) - (q1.c*q2.c) - (q1.d*q2.d),
                   (q1.a*q2.b) + (q1.b*q2.a) + (q1.c*q2.d) - (q1.d*q2.c),
                   (q1.a*q2.c) - (q1.b*q2.d) + (q1.c*q2.a) + (q1.d*q2.b),
@@ -195,11 +196,11 @@ Quaternion Quaternion::fromRotationMatrix(const vector_d &X, const vector_d &Y)
     mat[0] = X;
     mat[1] = Y;
     mat[2] = X.cross(Y);
-    ESP_LOGI(FNAME, "Z: %f,%f,%f", mat[2].a, mat[2].b, mat[2].c);
+    // ESP_LOGI(FNAME, "Z: %f,%f,%f", mat[2].a, mat[2].b, mat[2].c);
 
     Quaternion result;
     const double trace = mat[0].a + mat[1].b + mat[2].c;
-    ESP_LOGI(FNAME, "trace: %f", trace);
+    // ESP_LOGI(FNAME, "trace: %f", trace);
 
     // check the diagonal
     if ( trace > 0.0 ) {

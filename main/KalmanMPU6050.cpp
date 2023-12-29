@@ -166,7 +166,7 @@ void IMU::Process()
 	float gravity_trust = 1;
 	double roll = 0;
 	if( getTAS() > 10 ){
-		float loadFactor = accel.c;
+		float loadFactor = sqrt( accel.a * accel.a + accel.b * accel.b + accel.c * accel.c );
 		float lf = loadFactor > 2.0 ? 2.0 : loadFactor;
 		loadFactor = lf < 0 ? 0 : lf; // limit to 0..2g
 		// to get pitch and roll independent of circling, image pitch and roll values into 3D vector
@@ -188,7 +188,7 @@ void IMU::Process()
 		az1=accel.c;
 	}
 	vector_ijk gyro_rad = gyro * (float(M_PI)/180.0f);
-	// ESP_LOGI( FNAME, " ax1:%f ay1:%f az1:%f Gx:%f Gy:%f GZ:%f GRT:%f Roll:%.1f ", ax1, ay1, az1, gyro_rad.a, gyro_rad.b, gyro_rad.c, gravity_trust, R2D(roll) );
+	ESP_LOGI( FNAME, " ax1:%f ay1:%f az1:%f Gx:%f Gy:%f Gz:%f GRT:%f Roll:%.1f ", ax1, ay1, az1, gyro_rad.a, gyro_rad.b, gyro_rad.c, gravity_trust, R2D(roll) );
 	update_fused_vector(att_vector, gravity_trust, ax1, ay1, az1, gyro_rad, dt);
 	// ESP_LOGI(FNAME,"attv: %.3f %.3f %.3f", att_vector.a, att_vector.b, att_vector.c);
 	att_quat = quaternion_from_accelerometer(att_vector);

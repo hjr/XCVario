@@ -967,6 +967,7 @@ void system_startup(void *args){
 		}
 		mpud::raw_axes_t accelRaw;
 		float accel = 0;
+		delay(1000);
 		for( auto i=0; i<10; i++ ){
 			esp_err_t err = MPU.acceleration(&accelRaw);  // fetch raw data from the registers
 			if( err != ESP_OK )

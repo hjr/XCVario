@@ -188,7 +188,7 @@ void IMU::Process()
 		az1=accel.c;
 	}
 	vector_ijk gyro_rad = gyro * (float(M_PI)/180.0f);
-	ESP_LOGI( FNAME, " ax1:%f ay1:%f az1:%f Gx:%f Gy:%f Gz:%f GRT:%f Roll:%.1f ", ax1, ay1, az1, gyro_rad.a, gyro_rad.b, gyro_rad.c, gravity_trust, R2D(roll) );
+	ESP_LOGI( FNAME, " ax1:%f ay1:%f az1:%f Gx:%f Gy:%f Gz:%f GRT:%f Roll:%.1f ", ax1, ay1, az1, R2D(gyro_rad.a), R2D(gyro_rad.b), R2D(gyro_rad.c), gravity_trust, R2D(roll) );
 	update_fused_vector(att_vector, gravity_trust, ax1, ay1, az1, gyro_rad, dt);
 	// ESP_LOGI(FNAME,"attv: %.3f %.3f %.3f", att_vector.a, att_vector.b, att_vector.c);
 	att_quat = quaternion_from_accelerometer(att_vector);

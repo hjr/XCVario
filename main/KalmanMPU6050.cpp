@@ -165,15 +165,14 @@ void IMU::Process()
 		return;
 	float gravity_trust = 1;
 	double roll = 0;
+	double pitch = 0;
 	if( getTAS() > 10 ){
 		float loadFactor = sqrt( accel.a * accel.a + accel.b * accel.b + accel.c * accel.c );
 		float lf = loadFactor > 2.0 ? 2.0 : loadFactor;
 		loadFactor = lf < 0 ? 0 : lf; // limit to 0..2g
 		// to get pitch and roll independent of circling, image pitch and roll values into 3D vector
 		roll = -atan(((D2R(gyroZ) /cos( D2R(euler.roll)) ) * (getTAS()/3.6)) / 9.80665);
-		double pitch;
 		pitch = IMU::PitchFromAccelRad();
-
 		// Virtual gravity from centripedal forces to keep angle of bank while circling
 		ax1 = sin(pitch);                // Nose down (positive Y turn) results in negative X
 		ay1 = -sin(roll)*cos(pitch);     // Left wing down (or negative X roll) results in negative Y
@@ -188,13 +187,14 @@ void IMU::Process()
 		az1=accel.c;
 	}
 	vector_ijk gyro_rad = gyro * (float(M_PI)/180.0f);
-	ESP_LOGI( FNAME, " ax1:%f ay1:%f az1:%f Gx:%f Gy:%f Gz:%f GRT:%f Roll:%.1f ", ax1, ay1, az1, R2D(gyro_rad.a), R2D(gyro_rad.b), R2D(gyro_rad.c), gravity_trust, R2D(roll) );
 	update_fused_vector(att_vector, gravity_trust, ax1, ay1, az1, gyro_rad, dt);
 	// ESP_LOGI(FNAME,"attv: %.3f %.3f %.3f", att_vector.a, att_vector.b, att_vector.c);
 	att_quat = quaternion_from_accelerometer(att_vector);
 	// ESP_LOGI(FNAME,"attq: %.3f %.3f %.3f %.3f", att_quat.a, att_quat.b, att_quat.c, att_quat.d );
 	euler = att_quat.to_euler_angles();
 	// ESP_LOGI( FNAME,"Euler R:%.1f P:%.1f R:%f", euler.roll, euler.pitch, R2D(roll) );
+
+	ESP_LOGI( FNAME, " ax1:%f ay1:%f az1:%f Gx:%f Gy:%f Gz:%f GRT:%f Roll:%.1f Pitch:%.1f euler.pitch %.1f", ax1, ay1, az1, R2D(gyro_rad.a), R2D(gyro_rad.b), R2D(gyro_rad.c), gravity_trust, R2D(roll), R2D(pitch), euler.pitch );
 
 	// treat gimbal lock, limit to 88 deg
 	if( euler.roll > 88.0 )

@@ -1831,13 +1831,13 @@ void IpsDisplay::drawHorizon( float pitch, float roll, float yaw ){
 	Point P5( -100, 380 );
 	Point P6(  340, 380 );
 	Point Center( 120, 160 );
-	Point P1r = P1.rotate( Center, roll );
-	Point P2r = P2.rotate( Center, roll );
-	Point P3r = P3.rotate( Center, roll );
-	Point P4r = P4.rotate( Center, roll );
-	Point P5r = P5.rotate( Center, roll );
-	Point P6r = P6.rotate( Center, roll );
-	int p = rint(R2D( pitch )*2);  // 1 deg := 1 pixel
+	Point P1r = P1.rotate( Center, -roll );
+	Point P2r = P2.rotate( Center, -roll );
+	Point P3r = P3.rotate( Center, -roll );
+	Point P4r = P4.rotate( Center, -roll );
+	Point P5r = P5.rotate( Center, -roll );
+	Point P6r = P6.rotate( Center, -roll );
+	int p = -rint(R2D( pitch )*2);  // 1 deg := 1 pixel
 	P1r.moveVertical(p);
 	P2r.moveVertical(p);
 	P3r.moveVertical(p);
@@ -1866,6 +1866,8 @@ void IpsDisplay::drawHorizon( float pitch, float roll, float yaw ){
 		P6o = P6r;
 		oroll = roll;
 		ucg->undoClipRange();
+		ucg->setColor( COLOR_WHITE );
+		ucg->drawCircle(120, 160, 6);
 		xSemaphoreGive(spiMutex);
 	}
 	if( compass_enable.get() != CS_DISABLE ){

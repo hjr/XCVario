@@ -88,8 +88,8 @@ int IpsDisplay::last_avg = -1000;
 int IpsDisplay::x_start = 240;
 PolarIndicator* IpsDisplay::indicator = nullptr;
 
-#define DISPLAY_H 320
-#define DISPLAY_W 240
+int16_t DISPLAY_H;
+int16_t DISPLAY_W;
 
 // u8g2_t IpsDisplay::u8g2c;
 
@@ -348,6 +348,8 @@ IpsDisplay::IpsDisplay( AdaptUGC *aucg ) {
 	_dc = GPIO_NUM_MAX;
 	_reset = GPIO_NUM_MAX;
 	_cs = GPIO_NUM_MAX;
+	DISPLAY_W = ucg->getDisplayWidth();
+	DISPLAY_H = ucg->getDisplayHeight();
 	indicator = new PolarIndicator();
 	display_mutex = xSemaphoreCreateMutex();
 }
@@ -408,7 +410,7 @@ void IpsDisplay::clear(){
 	// ESP_LOGI(FNAME,"display clear()");
 	xSemaphoreTake(spiMutex,portMAX_DELAY );
 	ucg->setColor( COLOR_BLACK );
-	ucg->drawBox( 0,0,240,320 );
+	ucg->drawBox( 0,0,DISPLAY_W,DISPLAY_H );
 	screens_init = INIT_DISPLAY_NULL;
 	xSemaphoreGive(spiMutex);
 	redrawValues();

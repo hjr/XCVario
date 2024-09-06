@@ -139,6 +139,15 @@ void  AdaptUGC::begin() {
 	eglib_Init( &myeglib, &esp32_ili9341, &esp32_ili9341_config, &ili9341, &ili9341_config );
 	setClipRange( 0,0, 240, 320 );
 };
+int16_t AdaptUGC::getDisplayWidth() const
+{
+	return ili9341_config.width;
+}
+int16_t AdaptUGC::getDisplayHeight() const
+{
+	return ili9341_config.height;
+}
+
 
 void AdaptUGC::advanceCursor( size_t delta ){
 	switch(eglib_print_dir) {

@@ -1709,6 +1709,7 @@ void SetupMenu::system_menu_create_hardware_type( MenuEntry *top ){
 	diso->setHelp( "Display Orientation.  NORMAL means Rotary on left, TOPDOWN means Rotary on right  (reboots). A change will reset the AHRS reference calibration.");
 	diso->addEntry( "NORMAL");
 	diso->addEntry( "TOPDOWN");
+	diso->addEntry( "NINETY");
 
 	//
 	SetupMenuSelect * drawp = new SetupMenuSelect( "Needle Alignment", RST_NONE, 0, true, &drawing_prio );

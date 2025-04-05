@@ -51,6 +51,9 @@ private:
 class ESPRotary
 {
 private:
+	void button_isr_handler(void* arg);
+	void longpress_timeout(void *arg);
+	void ObserverTask(void *arg);
 	friend void button_isr_handler(void* arg);
 	friend void longpress_timeout(void *arg);
 	friend void ObserverTask(void *arg);

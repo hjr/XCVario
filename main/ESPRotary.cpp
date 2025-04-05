@@ -25,7 +25,7 @@ static TaskHandle_t pid = NULL;
 static std::stack<RotaryObserver *> observers;
 
 // The button portion of the rotary ISR
-void IRAM_ATTR button_isr_handler(void* arg)
+void IRAM_ATTR ESPRotary::button_isr_handler(void* arg)
 {
 	ESPRotary *knob = static_cast<ESPRotary*>(arg);
 	static uint64_t lastPressTime = 0;
@@ -64,7 +64,7 @@ void IRAM_ATTR button_isr_handler(void* arg)
 	}
 }
 // hold time-out watch dog time (task context)
-void IRAM_ATTR longpress_timeout(void* arg)
+void IRAM_ATTR ESPRotary::longpress_timeout(void* arg)
 {
 	static_cast<ESPRotary*>(arg)->hold = true;
 	int pressType = LONG_PRESS;
@@ -93,7 +93,7 @@ static bool IRAM_ATTR pcnt_event_handler(pcnt_unit_handle_t unit, const pcnt_wat
 }
 
 // Observer task
-void ObserverTask( void *arg )
+void ESPRotary::ObserverTask( void *arg )
 {
 	ESPRotary &knob = *static_cast<ESPRotary*>(arg);
 	while( true ) {

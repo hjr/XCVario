@@ -13,14 +13,14 @@
 #include "I2Cbus.hpp"
 #include "sensor.h"
 #include "SetupNG.h"
-#include "logdefnone.h"
+#include "protocol/Clock.h"
+#include "logdef.h"
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <freertos/queue.h>
 #include <sdkconfig.h>
 #include <esp_system.h>
-#include <esp_task_wdt.h>
 #include <driver/dac.h>
 #include <soc/rtc_io_reg.h>
 #include <soc/rtc_cntl_reg.h>
@@ -35,48 +35,9 @@
 #include <cstdlib>
 
 
+Audio *AUDIO = nullptr;
+
 static TaskHandle_t dactid = NULL;
-
-uint8_t Audio::_tonemode;
-float Audio::vario_mode_volume;
-float Audio::s2f_mode_volume;
-float Audio::speaker_volume;
-float Audio::current_volume;
-dac_channel_t Audio::_ch;
-
-bool  Audio::_chopping = false;
-float Audio::_range = 5.0;
-float Audio::_high_tone_var;
-bool  Audio::_s2f_mode = false;
-bool  Audio::sound=false;
-bool  Audio::_testmode=false;
-bool  Audio::deadband_active = false;
-bool  Audio::hightone = false;
-int   Audio::_delay=100;
-int   Audio::mtick = 0;
-bool  Audio::_alarm_mode=false;
-bool  Audio::_s2f_mode_back = false;
-unsigned long Audio::next_scedule=0;
-
-float Audio::_vol_back_vario = 0;
-float Audio::_vol_back_s2f = 0;
-float Audio::maxf;
-float Audio::minf;
-float Audio::current_frequency;
-float Audio::_te = 0;
-float Audio::exponent_max = 2;
-float Audio::prev_aud_fact = 0;
-
-int   Audio::prev_div = 0;
-int   Audio::prev_step = 0;
-int   Audio::scale = 0;
-int   Audio::prev_scale = -1;
-int   Audio::_tonemode_back = 0;
-int   Audio::tick = 0;
-int   Audio::volume_change=0;
-bool  Audio::dac_enable=false;
-bool  Audio::amplifier_enable=false;
-bool  Audio::_haveCAT5171=false;
 
 const int clk_8m_div = 7;    // RTC 8M clock divider (division is by clk_8m_div+1, i.e. 0 means 8MHz frequency)
 const float freq_step = RTC_FAST_CLK_FREQ_APPROX / (65536 * 8 );  // div = 0x07
@@ -88,16 +49,19 @@ typedef struct {  uint8_t div; uint8_t step; } t_lookup_entry;
 
 Poti *DigitalPoti;
 
-Audio::Audio( ) {
+Audio::Audio() :
+	Clock_I(1)
+{
 	_ch = DAC_CHAN_0;
-	_te = 0.0;
-	_testmode = false;
-	_range = 5.0;
-	_s2f_mode = false;
-	vario_mode_volume = 63;
-	s2f_mode_volume = 63;
-	current_volume = 63;
-	speaker_volume = 63;
+
+	esp_timer_create_args_t t_args = {
+		.callback = (esp_timer_cb_t)doAudio,
+		.arg = (void*)(this),
+		.dispatch_method = ESP_TIMER_TASK,
+		.name = "audio",
+		.skip_unhandled_events = true,
+	};
+	esp_timer_create(&t_args, &_timer);
 }
 
 // Keep the table in flash memory
@@ -164,11 +128,10 @@ static const std::vector<double> VOL1{ 0.1, 0.2, 0.3, 2.3, 0.6,  2.1,   2.2,  1.
 static const std::vector<double> F3{   50,  175, 490,  700, 1000, 1380, 2100, 2400, 3000, 4000, 10000   };
 static const std::vector<double> VOL3{ 1.3, 1.2, 0.9, 0.20,  1.2,  2.1,  1.8,  1.3,  1.9,  2.0,   2.0   };
 
-tk::spline *Audio::equalizerSpline = 0;
 
 void Audio::begin( dac_channel_t ch  )
 {
-	ESP_LOGI(FNAME,"Audio::begin");
+	ESP_LOGI(FNAME,"begin");
 	Switch::begin( GPIO_NUM_12 );
 	setup();
 	_ch = ch;
@@ -181,7 +144,9 @@ void Audio::begin( dac_channel_t ch  )
 	} else if( audio_equalizer.get() == AUDIO_EQ_LSEXT ) {
 		equalizerSpline  = new tk::spline(F3,VOL3, tk::spline::cspline_hermite );
 	}
-	vTaskDelay(pdMS_TO_TICKS(10));
+	Clock::start(this);
+	// doAudio
+	esp_timer_start_periodic(_timer, 100000); // usec
 }
 
 float Audio::equal_volume( float volume ){
@@ -461,7 +426,7 @@ void Audio::startAudio(){
 	_testmode = false;
 	evaluateChopping();
 	speaker_volume = vario_mode_volume;
-	xTaskCreate(&dactask, "dactask", 2400, NULL, 24, &dactid);
+	// xTaskCreate(&dactask, "dactask", 2400, NULL, 24, &dactid);
 }
 
 void Audio::calcS2Fmode( bool recalc ){
@@ -536,13 +501,13 @@ void Audio::writeVolume( float volume ){
 	current_volume = volume;
 }
 
-void Audio::dactask(void* arg )
+bool Audio::tick()
 {
-	esp_task_wdt_add(NULL);
+	static int tick_count = 0;
 
 	while(1){
 		TickType_t xLastWakeTime = xTaskGetTickCount();
-		tick++;
+		tick_count++;
 		Switch::tick();    // we hook switch sceduling here to save extra task
 		// Chopping or dual tone modulation
 		if( millis() > next_scedule ){
@@ -574,21 +539,22 @@ void Audio::dactask(void* arg )
 				hightone = false;
 			}
 			// Frequency Control
-			if( !audio_variable_frequency.get() )
+			if( !audio_variable_frequency.get() ) {
 				calculateFrequency();
+			}
 			next_scedule = millis()+_delay;
 		}
 //		if( audio_variable_frequency.get() )
 //			calculateFrequency();
 		// Amplifier and Volume control
-		if( !_testmode && !(tick%2) ) {
+		if( !_testmode && !(tick_count%2) ) {
 			// ESP_LOGI(FNAME, "sound dactask tick:%d volume:%f  te:%f db:%d", tick, speaker_volume, _te, inDeadBand(_te) );
 
 			// moved here to call calculateFrequency() less often:
 			if( audio_variable_frequency.get() )
-				calculateFrequency();
+			calculateFrequency();
 
-			if( !(tick%10) ){
+			if( !(tick_count%10) ){
 				calcS2Fmode(false);     // if mode changed, affects volume and frequency
 			}
 
@@ -608,7 +574,7 @@ void Audio::dactask(void* arg )
 				if( _tonemode == ATM_SINGLE_TONE ){
 					if( hightone )
 						if( _chopping )
-							sound = false;
+						sound = false;
 				}
 				// ESP_LOGI(FNAME,"Audio in DeadBand false");
 			}
@@ -644,7 +610,7 @@ void Audio::dactask(void* arg )
 					// ESP_LOGI(FNAME, "volume change, new volume: %f, current_volume %f", speaker_volume, current_volume );
 					// change volume logarithmically
 					if (current_volume < 3.0)
-						current_volume = 3.0;   // avoid division by zero
+					current_volume = 3.0;   // avoid division by zero
 					float g = speaker_volume / current_volume;
 					if (g < 0.25)
 						g = 0.25;
@@ -659,11 +625,10 @@ void Audio::dactask(void* arg )
 						if (f > max_volume.get())  f = max_volume.get();
 						writeVolume( f );
 						// ESP_LOGI(FNAME, "new volume: %f", f );
-						vTaskDelay(pdMS_TO_TICKS(1));
 					}
 					writeVolume( speaker_volume );
 					if( speaker_volume == 0 )
-						dacDisable();
+					dacDisable();
 					// ESP_LOGI(FNAME, "volume change, new volume: %d", current_volume );
 					// ESP_LOGI(FNAME, "have sound");
 				}
@@ -675,11 +640,10 @@ void Audio::dactask(void* arg )
 					}
 					else{
 						float volume=3;
-						for( int i=0; i<FADING_STEPS && volume <=speaker_volume; i++ ) {
+						for( int i=0; i<FADING_STEPS && volume <= speaker_volume; i++ ) {
 							// ESP_LOGI(FNAME, "fade in sound, volume: %3.1f", volume );
 							writeVolume( volume );
 							volume = volume*1.75;
-							vTaskDelay(pdMS_TO_TICKS(1));
 						}
 						if(  current_volume != speaker_volume ){
 							// ESP_LOGI(FNAME, "fade in sound, volume: %d", speaker_volume );
@@ -687,7 +651,7 @@ void Audio::dactask(void* arg )
 						}
 					}
 				}
-				if( !(tick%10) ){
+				if( !(tick_count%10) ){
 					writeVolume( speaker_volume );   // <<< why?
 				}
 			}
@@ -706,7 +670,6 @@ void Audio::dactask(void* arg )
 							if (volume < 3.0) {
 								volume = 0;
 							}
-							vTaskDelay(pdMS_TO_TICKS(1));
 						}
 						ESP_LOGI(FNAME, "fade out sound end");
 						writeVolume( 0 );
@@ -723,12 +686,11 @@ void Audio::dactask(void* arg )
 		if( uxTaskGetStackHighWaterMark( dactid ) < 256 ) {
 			ESP_LOGW(FNAME,"Warning Audio dac task stack low: %d bytes", uxTaskGetStackHighWaterMark( dactid ) );
 		}
-		vTaskDelayUntil(&xLastWakeTime, 10/portTICK_PERIOD_MS);
 		if( volume_change ) {
 			volume_change--;
 		}
-		esp_task_wdt_reset();
 	}
+	return false;
 }
 
 
@@ -875,10 +837,28 @@ bool Audio::lookup( float f, int& div, int &step ){
 	if (low != lftab.end()) {
 		div =  low->second.div;
 		step = low->second.step;
-		ESP_LOGI(FNAME, "found div:%d step:%d for F:%d", div, step, fi );
+		// ESP_LOGI(FNAME, "found div:%d step:%d for F:%d", div, step, fi );
 		return true;
 	}
 	ESP_LOGI(FNAME,"F: %d not found in map", fi );
 	return false;
 }
 
+
+void Audio::doAudio()
+{
+	polar_sink = Speed2Fly.sink( ias.get() );
+	float netto = te_vario.get() - polar_sink;
+	as2f = Speed2Fly.speed( netto, !Switch::getCruiseState() );
+	s2f_delta = s2f_delta + ((as2f - ias.get()) - s2f_delta)* (1/(s2f_delay.get()*10)); // low pass damping moved to the correct place
+	// ESP_LOGI( FNAME, "te: %f, polar_sink: %f, netto %f, s2f: %f  delta: %f", aTES2F, polar_sink, netto, as2f, s2f_delta );
+	if( vario_mode.get() == VARIO_NETTO || (Switch::getCruiseState() &&  (vario_mode.get() == CRUISE_NETTO)) ){
+		if( netto_mode.get() == NETTO_RELATIVE )
+			AUDIO->setValues( te_vario.get() - polar_sink + Speed2Fly.circlingSink( ias.get() ), s2f_delta );
+		else if( netto_mode.get() == NETTO_NORMAL )
+		AUDIO->setValues( te_vario.get() - polar_sink, s2f_delta );
+	}
+	else {
+		AUDIO->setValues( te_vario.get(), s2f_delta );
+	}
+}

@@ -167,6 +167,6 @@ void OTA::doSoftwareUpdate(IpsDisplay * p ){
     Webserver.stop();
 	ESP_LOGI(FNAME,"Now restart");
 	software_update.commit();
-	Audio::shutdown();
+	AUDIO->shutdown();
 	esp_restart();
 }

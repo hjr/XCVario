@@ -132,11 +132,6 @@ void CenterAid::drawCenterAid(){
 			ESP_LOGE(FNAME,"index out of range: %d", d );
 		}
 	}
-	if( wind_display.get() != WD_ARROW && wind_display.get() != WD_BOTH ){
-		// ESP_LOGI(FNAME,"draw Airplane");
-		ucg->setColor( COLOR_WHITE );
-		Flarm::drawAirplane( CENTER_X, CENTER_Y, false, true );
-	}
 }
 
 void CenterAid::setGeometry(int x, int y, int r)

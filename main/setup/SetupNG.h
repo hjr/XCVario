@@ -540,7 +540,6 @@ extern SetupNG<int> 		screen_gauge_bottom;
 extern SetupNG<bitfield_compass> 	calibration_bits;
 extern SetupNG<int> 		gear_warning;
 extern SetupNG<t_tenchar_id>  custom_wireless_id;
-extern SetupNG<int> 		drawing_prio;
 extern uint8_t g_col_background;
 extern uint8_t g_col_highlight;
 extern SetupNG<int> 		logging;

@@ -397,7 +397,7 @@ IpsDisplay::~IpsDisplay() {
 	if ( polWind ) {
 		delete polWind;
 		polWind = nullptr;
-}
+	}
 }
 
 
@@ -1534,7 +1534,7 @@ void IpsDisplay::initRetroDisplay( bool ulmode ){
 	}
 	if( theCenteraid ){
 		theCenteraid->setGeometry(AMIDX+AVGOFFX-38, AMIDY, 45);
-}
+	}
 }
 
 void IpsDisplay::drawWarning( const char *warn, bool push ){
@@ -1575,7 +1575,7 @@ void IpsDisplay::drawAvgVario( int16_t x, int16_t y, float val, bool large )
 		if (ival<0) {
 			ucg->setColor( COLOR_BBLUE );
 		} else {
-		ucg->setColor( COLOR_WHITE );
+			ucg->setColor( COLOR_WHITE );
 		}
 		ucg->setPrintPos(new_x_start, y + 8);
 		ucg->print(s);
@@ -2058,17 +2058,17 @@ void PolarWind::draw(int sdir, int sw, int idir, int iw)
 {
 	if ( sdir != _sytic_dir || sw != _sytic_w
 		|| idir != _inst_dir || iw != _inst_w ) {
-		if ( _sytic_dir > 0 ) drawPolarWind(_sytic_dir, _sytic_w, ERASE);
+		drawPolarWind(_sytic_dir, _sytic_w, ERASE);
 		_sytic_dir = sdir;
 		_sytic_w = sw;
 	IpsDisplay::ucg->setColor(DARK_GREY);
 	IpsDisplay::ucg->drawCircle(_center_x, _center_y, _radius+4);
-		if ( _sytic_dir > 0 ) drawPolarWind(_sytic_dir, _sytic_w, SYNAPT);
-		if ( _inst_dir > 0 ) drawPolarWind(_inst_dir, _inst_w, ERASE);
+		drawPolarWind(_sytic_dir, _sytic_w, SYNAPT);
+		drawPolarWind(_inst_dir, _inst_w, ERASE);
 		_inst_dir = idir;
 		_inst_dir = iw;
-		if ( _inst_dir > 0 ) drawPolarWind(_inst_dir, _inst_w, INST);
-}
+		drawPolarWind(_inst_dir, _inst_w, INST);
+	}
 }
 
 // Compass or Wind Display
@@ -2287,28 +2287,18 @@ void IpsDisplay::drawRetroDisplay( int airspeed_kmh, float te_ms, float ate_ms, 
 		drawConnection(DISPLAY_W-25, FLOGO );
 	}
 
-	bool needle_prio = (drawing_prio.get() == DP_NEEDLE);
-	bool bg_prio = (drawing_prio.get() == DP_BACKGROUND);
-	if( !(tick%2) && bg_prio ){  // draw needle first when background has prio
+	// Vario indicator
+	if( !(tick%2) ) {
 		indicator->drawPolarIndicatorAndBow(needle_pos, false);
 	}
 	// Airspeed
 	if( screen_gauge_top.get() && !(tick%5) ) {
-		drawSpeed( airspeed_kmh, INNER_RIGHT_ALIGN, SPEEDYPOS, speed_dirty );
+		drawTopGauge( airspeed_kmh, INNER_RIGHT_ALIGN, SPEEDYPOS, speed_dirty );
 	}
 	// Altitude
-	if( !(tick%4) ) {
-		// { // Enable those line, comment previous condition, for a drawAltimeter simulation
-		// static float alt = 0, rad = 0.0; int min_aq = std::max(alt_quant, (int16_t)1);
-		// altitude = alt + sin(rad) * (5*min_aq+2); rad += 0.003*min_aq;
-		// if( bg_prio ){
-			drawAltitude( altitude, INNER_RIGHT_ALIGN, 0.8*DISPLAY_H, alt_dirty );
-		// }else{  // needle prio
-		// 	if( drawAltitude( altitude, INNER_RIGHT_ALIGN, 0.8*DISPLAY_H, (alt_dirty && !(tick%10)) ) ){
-		// 		indicator->drawPolarIndicatorAndBow(needle_pos, true);
-		// 	}
-		// }
-			}
+	if( screen_gauge_bottom.get() && !(tick%4) ) {
+		drawAltitude( altitude, INNER_RIGHT_ALIGN, 0.8*DISPLAY_H, alt_dirty );
+	}
 
 	// Wind & center aid
 	if( !(tick%4) ){
@@ -2340,7 +2330,7 @@ void IpsDisplay::drawRetroDisplay( int airspeed_kmh, float te_ms, float ate_ms, 
 	}
 
 	// Vario Needle in Front mode drawn as last
-	if( !(tick%2) && needle_prio ){
+	if( !(tick%2) ){
 		indicator->drawPolarIndicatorAndBow(needle_pos, false);
 	}
 	// ESP_LOGI(FNAME,"polar-sink:%f Old:%f int:%d old:%d", polar_sink, old_polar_sink, int( polar_sink*100.), int( old_polar_sink*100. ) );

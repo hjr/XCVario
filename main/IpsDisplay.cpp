@@ -95,6 +95,8 @@ private:
 	bool dirty = true;
 };
 
+static const char* AirspeedModeStr();
+
 // local variables
 int screens_init = INIT_DISPLAY_NULL;
 
@@ -527,7 +529,7 @@ void IpsDisplay::initDisplay() {
 		ucg->setPrintPos(FIELD_START+6,YS2F-(2*fh) - 8);
 		ucg->setColor(COLOR_HEADER );
 
-		ucg->printf("%s %s", Units::AirspeedModeStr(), Units::AirspeedUnitStr() );
+		ucg->printf("%s %s", AirspeedModeStr(), Units::AirspeedUnitStr() );
 
 		ucg->setPrintPos(ASVALX,YS2F-(2*fh) - 8);
 		ucg->print(" S2F");
@@ -1528,6 +1530,7 @@ void IpsDisplay::initRetroDisplay( bool ulmode ){
 	}
 	if ( screen_gauge_bottom.get() ) {
 	drawAltitude( altitude.get(), INNER_RIGHT_ALIGN, 0.8*DISPLAY_H, true, true );
+	}
 	if ( FLAP ) {
 		FLAP->setBarPosition( WKSYMST-4, WKBARMID);
 		FLAP->setSymbolPosition( WKSYMST-3, WKBARMID-27*(abs(flap_neg_max.get()))-18 );
@@ -1752,7 +1755,7 @@ void IpsDisplay::drawSmallSpeed(float v, int16_t x, int16_t y)
 	ucg->print(s);
 }
 
-static const char* AirspeedModeStr()
+const char* AirspeedModeStr()
 {
 	if (airspeed_mode.get() == MODE_IAS)
 	{
@@ -1815,7 +1818,7 @@ bool IpsDisplay::drawTopGauge(int val, int16_t x, int16_t y, bool dirty, bool in
 			ucg->print(Units::AirspeedUnitStr() );
 			ucg->setPrintPos(x+5,y-17);
 			if ( screen_gauge_top.get() == GAUGE_SPEED ) { 
-				ucg->print(Units::AirspeedModeStr());
+				ucg->print(AirspeedModeStr());
 			}
 			else {
 				ucg->print("S2F");
@@ -2056,13 +2059,16 @@ float IpsDisplay::getHeading(){
 
 void PolarWind::draw(int sdir, int sw, int idir, int iw)
 {
+	int heading = static_cast<int>(std::round(IpsDisplay::getHeading()));
+	sdir = sdir - heading;
+	idir = idir - heading;
 	if ( sdir != _sytic_dir || sw != _sytic_w
 		|| idir != _inst_dir || iw != _inst_w ) {
 		drawPolarWind(_sytic_dir, _sytic_w, ERASE);
 		_sytic_dir = sdir;
 		_sytic_w = sw;
-	IpsDisplay::ucg->setColor(DARK_GREY);
-	IpsDisplay::ucg->drawCircle(_center_x, _center_y, _radius+4);
+		IpsDisplay::ucg->setColor(DARK_GREY);
+		IpsDisplay::ucg->drawCircle(_center_x, _center_y, _radius+4);
 		drawPolarWind(_sytic_dir, _sytic_w, SYNAPT);
 		drawPolarWind(_inst_dir, _inst_w, ERASE);
 		_inst_dir = idir;
@@ -2320,13 +2326,13 @@ void IpsDisplay::drawRetroDisplay( int airspeed_kmh, float te_ms, float ate_ms, 
 			// 	}
 			// }
 		// else{
-				iwdir = (int)extwind_inst_dir.get();
+				iwdir = extwind_inst_dir.get();
 				iw = extwind_inst_speed.get();
-				swdir = (int)extwind_sptc_dir.get();
+				swdir = extwind_sptc_dir.get();
 				sw = extwind_sptc_speed.get();
 		// 	}
-			polWind->draw(swdir, (int)sw, iwdir, (int)iw);
-	}
+			polWind->draw(swdir, sw, iwdir, iw);
+		}
 	}
 
 	// Vario Needle in Front mode drawn as last

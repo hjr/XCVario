@@ -97,7 +97,10 @@
         "polytope": "cpp",
         "vertexarraystate": "cpp",
         "buffered_value": "cpp",
-        "fast_back_stack": "cpp"
+        "fast_back_stack": "cpp",
+        "ranges": "cpp",
+        "glextensions": "cpp",
+        "texture": "cpp"
     },
     "idf.espIdfPath": "/home/hjr/opt/esp-idf_5/",
     "idf.toolsPath": "/home/hjr/.espressif",

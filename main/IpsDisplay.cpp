@@ -87,9 +87,9 @@ private:
 	int16_t _center_y;
 	int16_t _radius = 0; // distance to wind number
 	int _sytic_dir = 0.; // deg
-	int   _sytic_w = 0;
+	int _sytic_w = 0;
 	int _inst_dir = 0; // deg
-	int   _inst_w = 0;
+	int _inst_w = 0;
 	int _cheight;
 	int _cwidth;
 	bool dirty = true;
@@ -1536,7 +1536,7 @@ void IpsDisplay::initRetroDisplay( bool ulmode ){
 		FLAP->setSymbolPosition( WKSYMST-3, WKBARMID-27*(abs(flap_neg_max.get()))-18 );
 	}
 	if( theCenteraid ){
-		theCenteraid->setGeometry(AMIDX+AVGOFFX-38, AMIDY, 45);
+		theCenteraid->setGeometry(AMIDX+AVGOFFX-38, AMIDY, 47);
 	}
 }
 
@@ -2072,7 +2072,7 @@ void PolarWind::draw(int sdir, int sw, int idir, int iw)
 		drawPolarWind(_sytic_dir, _sytic_w, SYNAPT);
 		drawPolarWind(_inst_dir, _inst_w, ERASE);
 		_inst_dir = idir;
-		_inst_dir = iw;
+		_inst_w = iw;
 		drawPolarWind(_inst_dir, _inst_w, INST);
 	}
 }
